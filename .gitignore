@@ -1,6 +1,7 @@
 # ignore all build directories
 build/*
-sources/build/
+**/.build
+**/build
 # Prerequisites
 *.d
 

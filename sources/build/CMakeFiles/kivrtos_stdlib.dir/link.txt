@@ -1,2 +1,0 @@
-/usr/bin/arm-none-eabi-ar qc libkivrtos_stdlib.a CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdfile.cpp.obj CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmemory.cpp.obj CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmutex.cpp.obj CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdrandom.cpp.obj CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdstring.cpp.obj CMakeFiles/kivrtos_stdlib.dir/stdutils/src/oled.cpp.obj
-/usr/bin/arm-none-eabi-ranlib libkivrtos_stdlib.a
