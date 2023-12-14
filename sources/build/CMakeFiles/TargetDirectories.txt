@@ -1,0 +1,4 @@
+/home/jamesari/git/os/sp/sources/build/CMakeFiles/kivrtos_stdlib.dir
+/home/jamesari/git/os/sp/sources/build/CMakeFiles/kernel.dir
+/home/jamesari/git/os/sp/sources/build/CMakeFiles/edit_cache.dir
+/home/jamesari/git/os/sp/sources/build/CMakeFiles/rebuild_cache.dir

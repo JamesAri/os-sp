@@ -1,0 +1,36 @@
+CMakeFiles/kernel.dir/kernel/src/fs/filesystem_drivers.cpp.obj: \
+ /home/jamesari/git/os/sp/sources/kernel/src/fs/filesystem_drivers.cpp \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/filesystem.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/board/rpi0/hal/intdef.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/swi.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/spinlock.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/gpio_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/gpio.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/board/rpi0/hal/peripherals.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/memory/kernel_heap.h \
+ /home/jamesari/git/os/sp/sources/stdlib/include/stdstring.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/process_manager.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/process.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/uart_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/uart.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/bcm_aux.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/bridges/uart_defs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/utils/circural_buffer.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/trng_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/trng.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/shiftregister_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/shiftregister.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/segmentdisplay_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/segmentdisplay.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/oled_ssd1306_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/oled_ssd1306.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/i2c.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/semaphore_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/semaphore.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/resource_manager.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/mutex.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/condvar.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/pipe.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/mutex_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/condvar_fs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/drivers/pipe_fs.h

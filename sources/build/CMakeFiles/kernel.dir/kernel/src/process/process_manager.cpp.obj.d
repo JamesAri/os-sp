@@ -1,0 +1,24 @@
+CMakeFiles/kernel.dir/kernel/src/process/process_manager.cpp.obj: \
+ /home/jamesari/git/os/sp/sources/kernel/src/process/process_manager.cpp \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/process_manager.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/board/rpi0/hal/intdef.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/process.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/swi.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/fs/filesystem.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/spinlock.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/resource_manager.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/mutex.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/board/rpi0/hal/peripherals.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/semaphore.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/condvar.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/process/pipe.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/memory/kernel_heap.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/memory/pages.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/memory/memmap.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/memory/mmu.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/memory/pt_alloc.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/uart.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/bcm_aux.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/bridges/uart_defs.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/utils/circural_buffer.h \
+ /home/jamesari/git/os/sp/sources/kernel/include/drivers/timer.h
