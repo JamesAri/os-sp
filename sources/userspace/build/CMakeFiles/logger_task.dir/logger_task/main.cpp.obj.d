@@ -9,4 +9,6 @@ CMakeFiles/logger_task.dir/logger_task/main.cpp.obj: \
  /home/jamesari/git/os/sp/sources/userspace/../kernel/include/process/process_manager.h \
  /home/jamesari/git/os/sp/sources/userspace/../kernel/include/process/process.h \
  /home/jamesari/git/os/sp/sources/userspace/../stdlib/include/stdmutex.h \
+ /home/jamesari/git/os/sp/sources/userspace/../stdlib/include/stdrandom.h \
+ /home/jamesari/git/os/sp/sources/userspace/../stdlib/include/stdmemory.h \
  /home/jamesari/git/os/sp/sources/userspace/../kernel/include/drivers/bridges/uart_defs.h

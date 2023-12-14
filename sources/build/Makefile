@@ -902,6 +902,30 @@ stdlib/src/stdfile.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdfile.cpp.s
 .PHONY : stdlib/src/stdfile.cpp.s
 
+stdlib/src/stdmemory.obj: stdlib/src/stdmemory.cpp.obj
+.PHONY : stdlib/src/stdmemory.obj
+
+# target to build an object file
+stdlib/src/stdmemory.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmemory.cpp.obj
+.PHONY : stdlib/src/stdmemory.cpp.obj
+
+stdlib/src/stdmemory.i: stdlib/src/stdmemory.cpp.i
+.PHONY : stdlib/src/stdmemory.i
+
+# target to preprocess a source file
+stdlib/src/stdmemory.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmemory.cpp.i
+.PHONY : stdlib/src/stdmemory.cpp.i
+
+stdlib/src/stdmemory.s: stdlib/src/stdmemory.cpp.s
+.PHONY : stdlib/src/stdmemory.s
+
+# target to generate assembly for a file
+stdlib/src/stdmemory.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmemory.cpp.s
+.PHONY : stdlib/src/stdmemory.cpp.s
+
 stdlib/src/stdmutex.obj: stdlib/src/stdmutex.cpp.obj
 .PHONY : stdlib/src/stdmutex.obj
 
@@ -925,6 +949,30 @@ stdlib/src/stdmutex.s: stdlib/src/stdmutex.cpp.s
 stdlib/src/stdmutex.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmutex.cpp.s
 .PHONY : stdlib/src/stdmutex.cpp.s
+
+stdlib/src/stdrandom.obj: stdlib/src/stdrandom.cpp.obj
+.PHONY : stdlib/src/stdrandom.obj
+
+# target to build an object file
+stdlib/src/stdrandom.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdrandom.cpp.obj
+.PHONY : stdlib/src/stdrandom.cpp.obj
+
+stdlib/src/stdrandom.i: stdlib/src/stdrandom.cpp.i
+.PHONY : stdlib/src/stdrandom.i
+
+# target to preprocess a source file
+stdlib/src/stdrandom.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdrandom.cpp.i
+.PHONY : stdlib/src/stdrandom.cpp.i
+
+stdlib/src/stdrandom.s: stdlib/src/stdrandom.cpp.s
+.PHONY : stdlib/src/stdrandom.s
+
+# target to generate assembly for a file
+stdlib/src/stdrandom.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/kivrtos_stdlib.dir/build.make CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdrandom.cpp.s
+.PHONY : stdlib/src/stdrandom.cpp.s
 
 stdlib/src/stdstring.obj: stdlib/src/stdstring.cpp.obj
 .PHONY : stdlib/src/stdstring.obj
@@ -1079,9 +1127,15 @@ help:
 	@echo "... stdlib/src/stdfile.obj"
 	@echo "... stdlib/src/stdfile.i"
 	@echo "... stdlib/src/stdfile.s"
+	@echo "... stdlib/src/stdmemory.obj"
+	@echo "... stdlib/src/stdmemory.i"
+	@echo "... stdlib/src/stdmemory.s"
 	@echo "... stdlib/src/stdmutex.obj"
 	@echo "... stdlib/src/stdmutex.i"
 	@echo "... stdlib/src/stdmutex.s"
+	@echo "... stdlib/src/stdrandom.obj"
+	@echo "... stdlib/src/stdrandom.i"
+	@echo "... stdlib/src/stdrandom.s"
 	@echo "... stdlib/src/stdstring.obj"
 	@echo "... stdlib/src/stdstring.i"
 	@echo "... stdlib/src/stdstring.s"

@@ -11,6 +11,10 @@ CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdfile.cpp.obj: /home/jamesari/git/os/
   /home/jamesari/git/os/sp/sources/stdlib/include/stdfile.h \
   /home/jamesari/git/os/sp/sources/stdlib/include/stdstring.h
 
+CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmemory.cpp.obj: /home/jamesari/git/os/sp/sources/stdlib/src/stdmemory.cpp \
+  /home/jamesari/git/os/sp/sources/kernel/include/board/rpi0/hal/intdef.h \
+  /home/jamesari/git/os/sp/sources/stdlib/include/stdmemory.h
+
 CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmutex.cpp.obj: /home/jamesari/git/os/sp/sources/stdlib/src/stdmutex.cpp \
   /home/jamesari/git/os/sp/sources/kernel/include/board/rpi0/hal/intdef.h \
   /home/jamesari/git/os/sp/sources/kernel/include/fs/filesystem.h \
@@ -21,6 +25,15 @@ CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdmutex.cpp.obj: /home/jamesari/git/os
   /home/jamesari/git/os/sp/sources/stdlib/include/stdfile.h \
   /home/jamesari/git/os/sp/sources/stdlib/include/stdmutex.h \
   /home/jamesari/git/os/sp/sources/stdlib/include/stdstring.h
+
+CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdrandom.cpp.obj: /home/jamesari/git/os/sp/sources/stdlib/src/stdrandom.cpp \
+  /home/jamesari/git/os/sp/sources/kernel/include/board/rpi0/hal/intdef.h \
+  /home/jamesari/git/os/sp/sources/kernel/include/fs/filesystem.h \
+  /home/jamesari/git/os/sp/sources/kernel/include/process/process.h \
+  /home/jamesari/git/os/sp/sources/kernel/include/process/process_manager.h \
+  /home/jamesari/git/os/sp/sources/kernel/include/process/spinlock.h \
+  /home/jamesari/git/os/sp/sources/kernel/include/process/swi.h \
+  /home/jamesari/git/os/sp/sources/stdlib/include/stdfile.h
 
 CMakeFiles/kivrtos_stdlib.dir/stdlib/src/stdstring.cpp.obj: /home/jamesari/git/os/sp/sources/stdlib/src/stdstring.cpp \
   /home/jamesari/git/os/sp/sources/stdlib/include/stdstring.h
@@ -46,11 +59,15 @@ CMakeFiles/kivrtos_stdlib.dir/stdutils/src/oled.cpp.obj: /home/jamesari/git/os/s
 
 /home/jamesari/git/os/sp/sources/stdutils/src/oled.cpp:
 
-/home/jamesari/git/os/sp/sources/stdlib/src/stdstring.cpp:
+/home/jamesari/git/os/sp/sources/stdlib/src/stdrandom.cpp:
 
 /home/jamesari/git/os/sp/sources/kernel/include/drivers/bridges/display_protocol.h:
 
 /home/jamesari/git/os/sp/sources/stdlib/include/stdmutex.h:
+
+/home/jamesari/git/os/sp/sources/stdlib/src/stdstring.cpp:
+
+/home/jamesari/git/os/sp/sources/stdlib/include/stdmemory.h:
 
 /home/jamesari/git/os/sp/sources/kernel/include/process/process.h:
 
@@ -63,6 +80,8 @@ CMakeFiles/kivrtos_stdlib.dir/stdutils/src/oled.cpp.obj: /home/jamesari/git/os/s
 /home/jamesari/git/os/sp/sources/stdlib/include/stdstring.h:
 
 /home/jamesari/git/os/sp/sources/stdlib/src/stdfile.cpp:
+
+/home/jamesari/git/os/sp/sources/stdlib/src/stdmemory.cpp:
 
 /home/jamesari/git/os/sp/sources/kernel/include/process/spinlock.h:
 

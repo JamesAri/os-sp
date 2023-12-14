@@ -295,6 +295,15 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
             }
             break;
         }
+		// case NSWI_Process_Service::Sbrk:
+		// {
+		// 	uint32_t increment = r0;
+		// 	// sUART0.Write("sbrk call with increment: ");
+		// 	// sUART0.Write(increment);
+		// 	// sUART0.Write("\r\n");
+		// 	target.r0 = 42;
+		// 	break;
+		// }
     }
 }
 

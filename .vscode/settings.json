@@ -1,0 +1,8 @@
+{
+	"files.associations": {
+		"cstdint": "cpp",
+		"cstdlib": "cpp"
+	},
+	"cmake.sourceDirectory": "/home/jamesari/git/os/sp/sources",
+	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+}
