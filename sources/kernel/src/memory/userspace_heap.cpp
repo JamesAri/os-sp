@@ -15,7 +15,7 @@ CUserspace_Heap_Manager::CUserspace_Heap_Manager()
 void* CUserspace_Heap_Manager::Alloc(uint32_t increment)
 {
 	sUART0.Write("sbrk call with increment: ");
-	sUART0.Write(increment);
+	sUART0.Write_Hex(increment);
 	sUART0.Write("\r\n");
 
 	if (increment > mem::MaxProcessHeapSize)
@@ -97,7 +97,7 @@ void* CUserspace_Heap_Manager::Alloc(uint32_t increment)
 		task->heap_current_block_start = new_userspace_page_virt;
 	}
 
-	sUART0.Write("Allocating new page done!\r\n");
+	sUART0.Write("Allocating new page(s) done!\r\n");
 	task->heap_logical_break += increment;
 
 	return reinterpret_cast<void*>(prev_heap_logical_break);

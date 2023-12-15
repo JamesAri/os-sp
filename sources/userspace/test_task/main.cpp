@@ -16,31 +16,25 @@ static uint32_t fgets(uint32_t file, char* buffer, uint32_t size)
 	return read(file, buffer, size);
 }
 
+constexpr uint32_t RecvBfrSize = 1000;
+constexpr uint32_t StringBfrSize = 32;
 
-int main(int argc, char** argv)
+uint32_t trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
+uint32_t uart_file = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
+char receive_buffer[RecvBfrSize];
+char string_buffer[StringBfrSize];
+
+void init_uart()
 {
-	uint32_t uart_file = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
-
 	TUART_IOCtl_Params params;
 	params.baud_rate = NUART_Baud_Rate::BR_115200;
 	params.char_length = NUART_Char_Length::Char_8;
 	ioctl(uart_file, NIOCtl_Operation::Set_Params, &params);
+	fputs(uart_file, "TEST task starting!\r\n");
+}
 
-	fputs(uart_file, "UART task starting!\r\n");
-
-	char receive_buffer[1000];
-	char string_buffer[16];
-	bzero(receive_buffer, 1000);
-	bzero(string_buffer, 16);
-
-	float cislo = 123.456f;
-	char cislo_str[32];
-	bzero(cislo_str, 32);
-	ftoa(cislo, cislo_str);
-	fputs(uart_file, "\r\nSENDING FLOAT!\r\n");
-	fputs(uart_file, cislo_str);
-	fputs(uart_file, "\r\nSENT FLOAT!\r\n");
-
+void test_sbrk()
+{
 	void *ptr = sbrk(0x1000);
 	itoa((uint32_t)ptr, string_buffer, 16);
 	fputs(uart_file, "SBRK 0x1000: ");
@@ -84,46 +78,84 @@ int main(int argc, char** argv)
 	fputs(uart_file, "Stored value: ");
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
+}
 
-	uint32_t trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
+// tests fpu and ftoa
+void test_fpu()
+{
+	float cislo = 123.456f;
+	ftoa(cislo, string_buffer);
+	fputs(uart_file, "\r\nSENDING FLOAT!\r\n");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\nFLOAT SENT!\r\n");
+}
+
+// Tests TRNG floating point generation
+void test_trng()
+{
+	float rng_num = get_random_float(trng_file, 0.0f, 100.0f);
+	ftoa(rng_num, string_buffer);
+	fputs(uart_file, "GOT RANDOM NUMBER: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+}
+
+// Echo...
+void test_uart(uint32_t v)
+{
+	itoa(v, string_buffer, 10);
+	fputs(uart_file, "RECEIVED DATA!\r\n");
+	fputs(uart_file, "[");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "B]: ");
+	fputs(uart_file, receive_buffer);
+	fputs(uart_file, "\r\n");
+}
+
+// prints ascii values of received chars
+void test_recv_ascii(uint32_t v)
+{
+	for (uint32_t i = 0; i < v; i++)
+	{
+		int char_val_int = receive_buffer[i];
+		itoa(char_val_int, string_buffer, 16);
+		fputs(uart_file, "CHAR[0x");
+		fputs(uart_file, string_buffer);
+		fputs(uart_file, "]\r\n");
+	}
+}
+
+
+int main(int argc, char** argv)
+{
+	bzero(receive_buffer, RecvBfrSize);
+	bzero(string_buffer, StringBfrSize);
+	
+	init_uart();
+
+	test_fpu();
+	test_sbrk();
 
 	while(true) 
 	{
-		uint32_t v = fgets(uart_file, receive_buffer, 1000);
+		uint32_t v = fgets(uart_file, receive_buffer, RecvBfrSize);
 
 		if (v > 0)
 		{
-			receive_buffer[999] = '\0';
-			if (v < 1000) receive_buffer[v] = '\0';
+			if (v < RecvBfrSize) receive_buffer[v] = '\0';
+			else receive_buffer[RecvBfrSize-1] = '\0';
 
-			itoa(v, string_buffer, 10);
-			fputs(uart_file, "RECEIVED DATA!\r\n");
-			fputs(uart_file, "[");
-			fputs(uart_file, string_buffer);
-			fputs(uart_file, "]: ");
-			fputs(uart_file, receive_buffer);
-			fputs(uart_file, "\r\n");
-
-			for (uint32_t i = 0; i < v; i++)
-			{
-				int char_val_int = receive_buffer[i];
-				itoa(char_val_int, string_buffer, 16);
-				fputs(uart_file, "CHAR[0x");
-				fputs(uart_file, string_buffer);
-				fputs(uart_file, "]\r\n");
-			}
+			test_uart(v);		
+			test_recv_ascii(v);
 		} 
 		else 
 		{
 			fputs(uart_file, "WAIT CALLED!\r\n");
 			wait(uart_file);
 			fputs(uart_file, "WOKE UP!\r\n");
-
-			float rng_num = get_random_float(trng_file, 0.0f, 100.0f);
-			ftoa(rng_num, string_buffer);
-			fputs(uart_file, "GOT RANDOM NUMBER: ");
-			fputs(uart_file, string_buffer);
-			fputs(uart_file, "\r\n");
+			
+			// lets print random float after each wait...
+			test_trng();
 		}
 	}
     return 0;
