@@ -1,3 +1,5 @@
+#pragma once
+
 #include <hal/intdef.h>
 
 uint32_t get_random_uint32(uint32_t trng_file); 
