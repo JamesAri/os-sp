@@ -62,7 +62,7 @@ enum class NSWI_Process_Service
 	// pozadavek na alokaci pameti
 	// IN: r0 = pozadovany inkrement alokovane pameti
 	// OUT: r0 = ukazatel na zacatek alokovane pameti nebo nullptr pokud alokace selhala
-	// Sbrk			= 6,
+	Sbrk			= 6,
 };
 
 enum class NSWI_Filesystem_Service

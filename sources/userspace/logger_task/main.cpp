@@ -26,7 +26,6 @@ static uint32_t fgets(uint32_t file, char* buffer, uint32_t size)
 int main(int argc, char** argv)
 {
 	uint32_t uart_file = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
-	uint32_t trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
 
 	TUART_IOCtl_Params params;
 	params.baud_rate = NUART_Baud_Rate::BR_115200;
@@ -48,11 +47,13 @@ int main(int argc, char** argv)
 	fputs(uart_file, cislo_str);
 	fputs(uart_file, "\r\nSENT FLOAT!\r\n");
 
-	// void *ptr = sbrk(0x100000);
-	// itoa((uint32_t)ptr, string_buffer, 16);
-	// fputs(uart_file, "SBRK: ");
-	// fputs(uart_file, string_buffer);
-	// fputs(uart_file, "\r\n");
+	void *ptr = sbrk(0x100000);
+	itoa((uint32_t)ptr, string_buffer, 16);
+	fputs(uart_file, "SBRK: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+
+	uint32_t trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
 
 	while(true) 
 	{
@@ -82,15 +83,15 @@ int main(int argc, char** argv)
 		} 
 		else 
 		{
+			fputs(uart_file, "WAIT CALLED!\r\n");
+			wait(uart_file);
+			fputs(uart_file, "WOKE UP!\r\n");
+
 			float rng_num = get_random_float(trng_file, 0.0f, 100.0f);
 			ftoa(rng_num, string_buffer);
 			fputs(uart_file, "GOT RANDOM NUMBER: ");
 			fputs(uart_file, string_buffer);
 			fputs(uart_file, "\r\n");
-
-			fputs(uart_file, "WAIT CALLED!\r\n");
-			wait(uart_file);
-			fputs(uart_file, "WOKE UP!\r\n");
 		}
 	}
     return 0;
