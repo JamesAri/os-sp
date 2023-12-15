@@ -1,3 +1,5 @@
+# ignore doc
+doc/*
 # ignore all build directories
 build/*
 **/.build
