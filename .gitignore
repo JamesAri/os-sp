@@ -1,5 +1,7 @@
 # ignore doc
 doc/*
+# misc
+misc/* 
 # ignore all build directories
 build/*
 **/.build
