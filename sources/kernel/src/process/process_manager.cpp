@@ -2,6 +2,7 @@
 #include <process/resource_manager.h>
 
 #include <memory/kernel_heap.h>
+#include <memory/userspace_heap.h>
 #include <memory/pages.h>
 #include <memory/memmap.h>
 #include <memory/mmu.h>
@@ -118,7 +119,10 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->cpu_context.pc = is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
     // sp = zasobnik, vzdy je relokovany na nejakou fixni pamet, pro nas je jednoduche volit ho o velikosti 1MB
     // pozn. zasobnik roste na druhou stranu, takze musime SP nastavit na konec stranky
-    task->cpu_context.sp = 0x90000000 + mem::PageSize;
+    task->cpu_context.sp = mem::StackPageMemory + mem::PageSize;
+	// nastavime logicke zarazky na zacatek virtualni adresy haldy procesu
+	task->heap_current_block_start = mem::PageNotInitialized;
+	task->heap_logical_break = mem::PageNotInitialized;
 
     // alokujeme stranku pro kod a pro zasobnik
     uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
@@ -134,9 +138,9 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     copy_kernel_page_table_to(pt);
 
     // namapujeme kodovou stranku na zacatek virtualni pameti
-    map_memory(pt, code_page_phys, 0x00000000);
+    map_memory(pt, code_page_phys, mem::DataPageMemory);
     // namapujeme zasobnik na 0x90000000
-    map_memory(pt, stack_page_phys, 0x90000000);
+    map_memory(pt, stack_page_phys, mem::StackPageMemory);
 
     // nakopirujeme kod do kodove stranky, ale...:
     // TODO: cist sekce ELF formatu, pro ted zneuzivame toho, ze pro takto male binarky je ELF binarne kompatibilni se skutecnym otiskem v pameti
@@ -298,10 +302,8 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
 		case NSWI_Process_Service::Sbrk:
 		{
 			uint32_t increment = r0;
-			sUART0.Write("sbrk call with increment: ");
-			sUART0.Write(increment);
-			sUART0.Write("\r\n");
-			target.r0 = 42;
+			void *alloc_mem_bp = sUserspaceMem.Alloc(increment);
+			target.r0 = reinterpret_cast<uint32_t>(alloc_mem_bp);
 			break;
 		}
     }

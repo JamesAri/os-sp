@@ -22,7 +22,7 @@ extern "C"
 }
 
 // pocet zaznamu v tabulce stranek
-constexpr uint32_t PT_Size = 4096;
+constexpr uint32_t PT_Size = 4096; // 0xFFF = 4096 zaznamu
 
 // velikost regionu (ramce) v 1. urovni tabulky stranek, pokud neni pouzita coarse page table
 constexpr uint32_t PT_Region_Size = 0x100000;

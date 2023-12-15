@@ -6,12 +6,6 @@
 
 #include <drivers/bridges/uart_defs.h>
 
-/**
- * Logger task
- * 
- * Prijima vsechny udalosti od ostatnich tasku a oznamuje je skrz UART hostiteli
- **/
-
 static void fputs(uint32_t file, const char* string)
 {
 	write(file, string, strlen(string));
@@ -47,9 +41,47 @@ int main(int argc, char** argv)
 	fputs(uart_file, cislo_str);
 	fputs(uart_file, "\r\nSENT FLOAT!\r\n");
 
-	void *ptr = sbrk(0x100000);
+	void *ptr = sbrk(0x1000);
 	itoa((uint32_t)ptr, string_buffer, 16);
-	fputs(uart_file, "SBRK: ");
+	fputs(uart_file, "SBRK 0x1000: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+	*(static_cast<uint32_t*>(ptr)) = 0xAAAAAAAA;
+	itoa(*(static_cast<uint32_t*>(ptr)), string_buffer, 16);
+	fputs(uart_file, "Stored value: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+
+	ptr = sbrk(0x1000);
+	itoa((uint32_t)ptr, string_buffer, 16);
+	fputs(uart_file, "SBRK 0x1000: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+	*(static_cast<uint32_t*>(ptr)) = 0xBBBBBBBB;
+	itoa(*(static_cast<uint32_t*>(ptr)), string_buffer, 16);
+	fputs(uart_file, "Stored value: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+
+	ptr = sbrk(0x100000);
+	itoa((uint32_t)ptr, string_buffer, 16);
+	fputs(uart_file, "SBRK 0x100000: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+	*(static_cast<uint32_t*>(ptr)) = 0xCCCCCCCC;
+	itoa(*(static_cast<uint32_t*>(ptr)), string_buffer, 16);
+	fputs(uart_file, "Stored value: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+
+	ptr = sbrk(0x300000);
+	itoa((uint32_t)ptr, string_buffer, 16);
+	fputs(uart_file, "SBRK 0x300000: ");
+	fputs(uart_file, string_buffer);
+	fputs(uart_file, "\r\n");
+	*(static_cast<uint32_t*>(ptr)) = 0xDDDDDDDD;
+	itoa(*(static_cast<uint32_t*>(ptr)), string_buffer, 16);
+	fputs(uart_file, "Stored value: ");
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 

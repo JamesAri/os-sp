@@ -50,4 +50,7 @@ struct TTask_Struct
                                                 // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     uint32_t deadline;                          // deadline dokonceni tasku
     uint32_t notified_deadline;                 // deadline nastavena po nasledujicim probuzeni procesu
+
+	uint32_t heap_current_block_start;			// adresa zacatku aktualni heap stranky
+	uint32_t heap_logical_break;				// aktualni hranice heapu - zacatek volneho mista
 };

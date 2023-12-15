@@ -25,4 +25,19 @@ namespace mem
 
     // kolik stranek vlastne muzeme pridelit?
     constexpr uint32_t PageCount = PagingMemorySize / PageSize;
+
+	// virt. adresa stranky pro zasobnik procesu - pozor, zasobnik roste na druhou stranu, tedy zacatek je : addr + 1MiB
+	constexpr uint32_t StackPageMemory = 0x90000000;
+
+	// virt. adresa prvni stranky pro heap procesu
+	constexpr uint32_t HeapPageMemory = 0x40000000;
+
+	// virt. adresa stranky pro data (a zatim i kod) procesu
+	constexpr uint32_t DataPageMemory = 0x00000000;
+
+	// indikace pro breakpoint
+	constexpr uint32_t PageNotInitialized = -1;
+
+	// maximalni velikost haldy procesu - zatim blbost, ale alespon nejaky limit
+	constexpr uint32_t MaxProcessHeapSize = 0x10000000; // 256 MB
 }
