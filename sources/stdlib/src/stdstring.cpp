@@ -63,6 +63,26 @@ char* strncpy(char* dest, const char *src, int num)
    return dest;
 }
 
+unsigned int strcspn(const char* str1, const char* str2)
+{
+	unsigned int i = 0;
+	unsigned int j = 0;
+
+	while (str1[i] != '\0')
+	{
+		while (str2[j] != '\0')
+		{
+			if (str1[i] == str2[j])
+				return i;
+			j++;
+		}
+		j = 0;
+		i++;
+	}
+
+	return i;
+}
+
 int strncmp(const char *s1, const char *s2, int num)
 {
 	unsigned char u1, u2;
