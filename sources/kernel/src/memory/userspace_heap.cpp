@@ -2,8 +2,6 @@
 #include <memory/pages.h>
 #include <process/process_manager.h>
 #include <memory/mmu.h>
-// TOOD: REMOVE
-#include <drivers/uart.h>
 
 CUserspace_Heap_Manager sUserspaceMem;
 
@@ -14,10 +12,6 @@ CUserspace_Heap_Manager::CUserspace_Heap_Manager()
 
 void* CUserspace_Heap_Manager::Alloc(uint32_t increment)
 {
-	sUART0.Write("sbrk call with increment: ");
-	sUART0.Write_Hex(increment);
-	sUART0.Write("\r\n");
-
 	if (increment > mem::MaxProcessHeapSize)
 	{
 		return nullptr;
@@ -62,7 +56,6 @@ void* CUserspace_Heap_Manager::Alloc(uint32_t increment)
 	// inkrement se stale vejde do aktualni stranky
 	if (increment <= free_memory)
 	{
-		sUART0.Write("Increment fits into current page!\r\n");
 		task->heap_logical_break += increment;
 		return reinterpret_cast<void*>(prev_heap_logical_break);
 	}
@@ -75,14 +68,8 @@ void* CUserspace_Heap_Manager::Alloc(uint32_t increment)
 		num_of_needed_pages++;
 	}
 
-	sUART0.Write("Num of needed pages: ");
-	sUART0.Write(num_of_needed_pages);
-	sUART0.Write("\r\n");
-
-
 	for (uint32_t i = 0; i < num_of_needed_pages; i++)
 	{
-		sUART0.Write("Allocating new page!\r\n");
 		uint32_t new_kernel_page_virt = sPage_Manager.Alloc_Page();
 		if (new_kernel_page_virt == 0)
 		{
@@ -97,7 +84,6 @@ void* CUserspace_Heap_Manager::Alloc(uint32_t increment)
 		task->heap_current_block_start = new_userspace_page_virt;
 	}
 
-	sUART0.Write("Allocating new page(s) done!\r\n");
 	task->heap_logical_break += increment;
 
 	return reinterpret_cast<void*>(prev_heap_logical_break);
