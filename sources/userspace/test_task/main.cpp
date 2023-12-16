@@ -19,18 +19,25 @@ static uint32_t fgets(uint32_t file, char* buffer, uint32_t size)
 constexpr uint32_t RecvBfrSize = 1000;
 constexpr uint32_t StringBfrSize = 32;
 
-uint32_t trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
-uint32_t uart_file = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
+uint32_t trng_file;
+uint32_t uart_file;
 char receive_buffer[RecvBfrSize];
 char string_buffer[StringBfrSize];
 
 void init_uart()
 {
+	uart_file = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
+	if (uart_file == Invalid_Handle) return;
 	TUART_IOCtl_Params params;
 	params.baud_rate = NUART_Baud_Rate::BR_115200;
 	params.char_length = NUART_Char_Length::Char_8;
 	ioctl(uart_file, NIOCtl_Operation::Set_Params, &params);
 	fputs(uart_file, "TEST task starting!\r\n");
+}
+
+void init_trng()
+{
+	trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
 }
 
 void test_sbrk()
@@ -132,6 +139,9 @@ int main(int argc, char** argv)
 	bzero(string_buffer, StringBfrSize);
 	
 	init_uart();
+	if (uart_file == Invalid_Handle) return 1;
+	init_trng();
+	if (trng_file == Invalid_Handle) return 1;
 
 	test_fpu();
 	test_sbrk();
