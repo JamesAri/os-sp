@@ -71,8 +71,8 @@ int strncmp(const char *s1, const char *s2, int num)
       	u1 = (unsigned char) *s1++;
      	u2 = (unsigned char) *s2++;
       	if (u1 != u2)
-        	return u1 - u2;
-      	if (u1 == '\0')
+        	return u1 - u2; // ?
+      	if (u1 == '\0') // u1 == u2
         	return 0;
     }
 
@@ -87,6 +87,17 @@ int strlen(const char* s)
 		i++;
 
 	return i;
+}
+
+int strncmp(const char *s1, const char *s2)
+{	
+	unsigned int str_len1 = strlen(s1);
+	unsigned int str_len2 = strlen(s2);
+	if (str_len1 != str_len2)
+	{
+		return str_len1 - str_len2;
+	}
+	return strncmp(s1, s2, str_len1);
 }
 
 void bzero(void* memory, int length)

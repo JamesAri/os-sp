@@ -132,6 +132,24 @@ void test_recv_ascii(uint32_t v)
 	}
 }
 
+void test_parsing()
+{
+	char string_copy[RecvBfrSize];
+	strncpy(string_copy, receive_buffer, RecvBfrSize);
+	string_copy[strcspn(string_copy, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
+	if (strncmp(string_copy, "stop") == 0)
+	{
+		fputs(uart_file, "Received STOP command!\r\n");
+	}
+	else if (strncmp(string_copy, "parameters") == 0)
+	{
+		fputs(uart_file, "Received PARAMETERS command!\r\n");
+	}
+	else
+	{
+		fputs(uart_file, "Received UNKNOWN command!\r\n");
+	}
+}
 
 int main(int argc, char** argv)
 {
@@ -157,6 +175,7 @@ int main(int argc, char** argv)
 
 			test_uart(v);		
 			test_recv_ascii(v);
+			test_parsing();
 		} 
 		else 
 		{
