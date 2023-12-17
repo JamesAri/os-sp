@@ -90,6 +90,7 @@ prefetch_abort_handler:
 data_abort_handler:
 	b generic_abort_handler
 
+.global _internal_generic_abort_handler
 generic_abort_handler:
 	;@ Pozn.: tyto instrukce jsou stejne, jako v handleru IRQ a supervisor callu; hodily by se v pripade, ze bychom meli swap a chteli se
 	;@        z abortu jeste vratit. Swap ale nemame, a tak proste jen zavolame terminate a task ukoncime
@@ -97,7 +98,7 @@ generic_abort_handler:
 	;@cpsid if, #CPSR_MODE_SYS
 	;@push {r0-r12}
 	;@push {lr}
-
+	bl _internal_generic_abort_handler
 	mov r0, #64			;@ nejaky navratovy kod, abychom mohli treba ladit
 	svc #1
 

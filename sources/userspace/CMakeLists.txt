@@ -36,5 +36,9 @@ ENDFUNCTION(ADD_USERSPACE_EXECUTABLE)
 # init task - systemovy task, musi byt pritomen
 ADD_USERSPACE_EXECUTABLE(init_task init_task/main.cpp)
 
+# Add model specific stuff
+SET(MODEL_UTILS_FILES main_task/model_defs.h main_task/model_utils.cpp main_task/model_utils.h)
 # volitelne tasky pro ruzne ulohy
-ADD_USERSPACE_EXECUTABLE(main_task main_task/main.cpp)
+ADD_USERSPACE_EXECUTABLE(main_task main_task/main.cpp ${MODEL_UTILS_FILES})
+
+

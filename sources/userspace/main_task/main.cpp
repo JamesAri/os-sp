@@ -3,9 +3,11 @@
 #include <stdmutex.h>
 #include <stdrandom.h>
 #include <stdmemory.h>
-#include <kth-finder.h>
 
 #include <drivers/bridges/uart_defs.h>
+
+#include "model_defs.h"
+#include "model_utils.h"
 
 static void fputs(uint32_t file, const char* string)
 {
@@ -34,7 +36,7 @@ void init_uart()
 	params.baud_rate = NUART_Baud_Rate::BR_115200;
 	params.char_length = NUART_Char_Length::Char_8;
 	ioctl(uart_file, NIOCtl_Operation::Set_Params, &params);
-	fputs(uart_file, "TEST task starting!\r\n");
+	fputs(uart_file, "MAIN task starting!\r\n");
 }
 
 void init_trng()
@@ -57,43 +59,13 @@ void print_duration(void (*callback)(), const char *msg)
 	fputs(uart_file, "\r\n");
 }
 
-enum class EChromosome_Parameters
-{
-	A = 0,
-	B = 1,
-	C = 2,
-	D = 3,
-	E = 4
-};
-
-struct TChromosome
-{
-	float A;
-	float B;
-	float C;
-	float D;
-	float E;
-};
-
-struct TModel_Parameters
-{
-	int t_delta;
-	int t_pred;
-};
-
-struct TModel_Record
-{
-	TChromosome *chromosome;
-	float fitness;
-};
-
-TChromosome current_chromosome = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+TModel_Record best_record = {{1.0f, 1.0f, 1.0f, 1.0f, 1.0f}, 1.0f};
 
 TModel_Parameters model_parameters = {5, 15};
 
 // TICS MEASURED ON Pop_Size = 10000 and Iterations = 100
 
-constexpr int Pop_Size = 10000;
+constexpr int Pop_Size = 1000;
 constexpr int Iterations = 100;
 
 // napr. 1024 zaznamu... uzivatel zatim pise rucne do konzole, takze to snad bude stacit
@@ -124,38 +96,41 @@ int t_current = T_MIN;
 constexpr int Fitness_Vector_Size = Pop_Size * 2;
 constexpr unsigned int FITNESS_VECTOR_SIZE_BYTES = Fitness_Vector_Size * sizeof(float);
 
-TChromosome *population_old;
-TChromosome *population_new;
-float *fitness;
-float *tmp_fitness;
+// TChromosome *population_old;
+// TChromosome *population_new;
+// float *fitness;
+// float *tmp_fitness;
 
 // fitness_new vector pointing at the start of the fitness vector
 // fitness_old vector pointing in the middle of the fitness vector
 // allows us to use only one fitness vector and swap the pointers without copying the data
-float* fitness_new;
-float* fitness_old;
+// float* fitness_new;
+// float* fitness_old;
 
-// constexpr uint32_t Pop_Size_Total = Pop_Size * 2;
-// TModel_Record *population;
-// TModel_Record *__population_old;
-// TModel_Record *__population_new;
+constexpr uint32_t Pop_Size_Total = Pop_Size * 2;
+TModel_Record *population;
+TModel_Record *__population_old;
+TModel_Record *__population_new;
 
 
 // =========== UTILS ===========
 
 void init_buffers()
 {
-	// population = static_cast<TModel_Record*>(sbrk(Pop_Size_Total * sizeof(TModel_Record)));
-	// __population_old = population;
-	// __population_new = population + Pop_Size;
+	population = static_cast<TModel_Record*>(sbrk(Pop_Size_Total * sizeof(TModel_Record)));
+	__population_old = population;
+	__population_new = population + Pop_Size;
+	fputs(uart_file, "WAIT CALLED!\r\n");
+	wait(uart_file);
+	fputs(uart_file, "WOKE UP!\r\n");
 
-	population_old = static_cast<TChromosome*>(sbrk(Pop_Size * sizeof(TChromosome)));
-	population_new = static_cast<TChromosome*>(sbrk(Pop_Size * sizeof(TChromosome)));
-	fitness = static_cast<float*>(sbrk(Fitness_Vector_Size * sizeof(float)));
-	tmp_fitness = static_cast<float*>(sbrk(Fitness_Vector_Size * sizeof(float)));
+	// population_old = static_cast<TChromosome*>(sbrk(Pop_Size * sizeof(TChromosome)));
+	// population_new = static_cast<TChromosome*>(sbrk(Pop_Size * sizeof(TChromosome)));
+	// fitness = static_cast<float*>(sbrk(Fitness_Vector_Size * sizeof(float)));
+	// tmp_fitness = static_cast<float*>(sbrk(Fitness_Vector_Size * sizeof(float)));
 
-	fitness_new = fitness;
-	fitness_old = fitness_new + Pop_Size;
+	// fitness_new = fitness;
+	// fitness_old = fitness_new + Pop_Size;
 }
 
 uint32_t get_random_param_index()
@@ -187,50 +162,50 @@ int lookup(int t)
 }
 
 // Copies old_population to new_population
-void copy_population()
-{
-	for (int i = 0; i < Pop_Size; i++)
-	{
-		population_old[i] = population_new[i];
-	}
-}
+// void copy_population()
+// {
+// 	for (int i = 0; i < Pop_Size; i++)
+// 	{
+// 		population_old[i] = population_new[i];
+// 	}
+// }
 
-void swap_fitness_vectors() 
-{
-	float* tmp = fitness_new;
-	fitness_new = fitness_old;
-	fitness_old = tmp;
-}
+// void swap_fitness_vectors() 
+// {
+// 	float* tmp = fitness_new;
+// 	fitness_new = fitness_old;
+// 	fitness_old = tmp;
+// }
 
-void copy_array(float* from, float* to, int size) 
-{
-	for(int i = 0; i < size; i++) 
-	{
-		to[i] = from[i];
-	}
-}
+// void copy_array(float* from, float* to, int size) 
+// {
+// 	for(int i = 0; i < size; i++) 
+// 	{
+// 		to[i] = from[i];
+// 	}
+// }
 
 void print_current_chromosome() 
 {
 	fputs(uart_file, "Best chromosome: \r\n");
 	fputs(uart_file, "A: ");
-	ftoa(current_chromosome.A, string_buffer);
+	ftoa(best_record.chromosome.A, string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 	fputs(uart_file, "B: ");
-	ftoa(current_chromosome.B, string_buffer);
+	ftoa(best_record.chromosome.B, string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 	fputs(uart_file, "C: ");
-	ftoa(current_chromosome.C, string_buffer);
+	ftoa(best_record.chromosome.C, string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 	fputs(uart_file, "D: ");
-	ftoa(current_chromosome.D, string_buffer);
+	ftoa(best_record.chromosome.D, string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 	fputs(uart_file, "E: ");
-	ftoa(current_chromosome.E, string_buffer);
+	ftoa(best_record.chromosome.E, string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 }
@@ -258,10 +233,10 @@ void calculate_fitness()
 		for(int i = 0; i < Pop_Size; i++)
 		{
 			// spocteme predikci v case (t - model_parameters.t_pred) a porovname s lookup(t) (aktualni hodnota)
-			const float pred = y(t - model_parameters.t_pred, population_new[i].A, population_new[i].B, population_new[i].C, population_new[i].D, population_new[i].E, model_parameters.t_delta);
+			const float pred = y(t - model_parameters.t_pred, __population_new[i].chromosome.A, __population_new[i].chromosome.B, __population_new[i].chromosome.C, __population_new[i].chromosome.D, __population_new[i].chromosome.E, model_parameters.t_delta);
 			// Optimization: Use ABS instead of MSE formula: (y-y')^2 - [3.5k tics to 1.7k tics]
 			const float strength = pred - lookup(t);
-			fitness_new[i] += (strength >= 0.0f) ? strength : -strength;
+			__population_new[i].fitness += (strength >= 0.0f) ? strength : -strength;
 		}
 	}
 }
@@ -280,13 +255,13 @@ void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 		{
 			// spocteme predikci v case (t - t_pred) a porovname s opravdovou hodnotou v case t.
 			// b()
-			const float b_t = (population_new[i].D / population_new[i].E) * ((val_t_diff) / model_parameters.t_delta) + (1.0f / population_new[i].E) * val_t;
+			const float b_t = (__population_new[i].chromosome.D / __population_new[i].chromosome.E) * ((val_t_diff) / model_parameters.t_delta) + (1.0f / __population_new[i].chromosome.E) * val_t;
 			// y()
-			const float pred = population_new[i].A * b_t + population_new[i].B * b_t * (b_t - val_t) + population_new[i].C;
+			const float pred = __population_new[i].chromosome.A * b_t + __population_new[i].chromosome.B * b_t * (b_t - val_t) + __population_new[i].chromosome.C;
 			
 			// Optimization: Use ABS instead of MSE formula: (y-y')^2 - [3.5k tics to 1.7k tics]
 			const float strength = pred - val_t;
-			fitness_new[i] += (strength >= 0.0f) ? strength : -strength;
+			__population_new[i].fitness += (strength >= 0.0f) ? strength : -strength;
 		}
 	}
 }
@@ -294,32 +269,32 @@ void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 // 1k-5k tics (converges towards 5k tics)
 void select() 
 {
-	copy_array(fitness, tmp_fitness, Fitness_Vector_Size);
+	// copy_array(fitness, tmp_fitness, Fitness_Vector_Size);
 	// memcpy(fitness, tmp_fitness, FITNESS_VECTOR_SIZE_BYTES);
 	
 	// find fitness vector median (top 1/2 population), mutates the vector, thus the copy
-	const float median = Kth_Finder::findKthLargest(tmp_fitness, Fitness_Vector_Size, Pop_Size);
+	Model_Utils::split_model(population, Pop_Size_Total, Pop_Size_Total);
 	
-	int index = 0;
+	// int index = 0;
 
-	// Select the best chromosomes from both old and new population
-	for (int i = 0; i < Pop_Size; i++)
-	{
-		if (fitness_new[i] <= median)
-		{
-			fitness_new[index] = fitness_new[i];
-			population_new[index] = population_new[i];
-			index++;
-			if(index >= Pop_Size) break;
-		}
-		if (fitness_old[i] <= median)
-		{
-			fitness_new[index] = fitness_old[i];
-			population_new[index] = population_old[i];
-			index++;
-			if(index >= Pop_Size) break;
-		}
-	}
+	// // Select the best chromosomes from both old and new population
+	// for (int i = 0; i < Pop_Size; i++)
+	// {
+	// 	if (fitness_new[i] <= median)
+	// 	{
+	// 		fitness_new[index] = fitness_new[i];
+	// 		population_new[index] = population_new[i];
+	// 		index++;
+	// 		if(index >= Pop_Size) break;
+	// 	}
+	// 	if (fitness_old[i] <= median)
+	// 	{
+	// 		fitness_new[index] = fitness_old[i];
+	// 		population_new[index] = population_old[i];
+	// 		index++;
+	// 		if(index >= Pop_Size) break;
+	// 	}
+	// }
 }
 
 // 170 tics
@@ -333,11 +308,12 @@ void crossover()
 
 	for(int i = 1; i < Pop_Size; i+=2) 
 	{
-		population_new[i-1] = population_old[i-1];
-		population_new[i] = population_old[i];
+		// first copy the old chromosomes to the new population, which will then be modified by the crossover
+		__population_new[i-1].chromosome = __population_old[i-1].chromosome;
+		__population_new[i].chromosome = __population_old[i].chromosome;
 
-		TChromosome &child = population_new[i-1];
-		TChromosome &parent = population_new[i];
+		TChromosome &child = __population_new[i-1].chromosome;
+		TChromosome &parent = __population_new[i].chromosome;
 
 		// randomly select number of parameters to copy from parent to child, min 2, max 3
 		// OFF for better performance (always crossover only 2 parameters) - [3.5k tics to 1.8k tics]
@@ -405,19 +381,19 @@ void mutate()
 		switch(static_cast<EChromosome_Parameters>((rnd_index + i) % 5)) 
 		{
 			case EChromosome_Parameters::A:
-				population_new[i].A += rnd_val;
+				__population_new[i].chromosome.A += rnd_val;
 				break;
 			case EChromosome_Parameters::B:
-				population_new[i].B += rnd_val;
+				__population_new[i].chromosome.B += rnd_val;
 				break;
 			case EChromosome_Parameters::C:
-				population_new[i].C += rnd_val;
+				__population_new[i].chromosome.C += rnd_val;
 				break;
 			case EChromosome_Parameters::D:
-				population_new[i].D += rnd_val;
+				__population_new[i].chromosome.D += rnd_val;
 				break;
 			case EChromosome_Parameters::E:
-				population_new[i].E += rnd_val;
+				__population_new[i].chromosome.E += rnd_val;
 				break;	
 			default:
 				break;
@@ -430,7 +406,7 @@ void next_generation()
 	// =========== PRESERVE OLD POPULATION: NEW --> OLD ===========
 
 	// Copy new population to old population array:
-	copy_population(); // TODO optimize
+	// copy_population(); // TODO optimize
 	// print_duration(copy_population, "copy_population duration: ");
 
 	// Since new population got copied to the old one, we need to swap the fitness pointers.
@@ -438,7 +414,7 @@ void next_generation()
 	// fitness vector before: [-----fitness_old-----|-----fitness_new-----]
 	// fitness vector after:  [-----fitness_new-----|-----fitness_old-----]
 	// the [-----fitness_new-----] will be overwritten in the next steps (by the new population).
-	swap_fitness_vectors();
+	// swap_fitness_vectors();
 	// print_duration(swap_fitness_vectors, "swap_fitness_vectors duration: ");
 
 	
@@ -465,11 +441,11 @@ void init_population()
 {
 	for (int i = 0; i < Pop_Size; i++)
 	{
-		population_new[i].A = get_random_param_value();
-		population_new[i].B = get_random_param_value();
-		population_new[i].C = get_random_param_value();
-		population_new[i].D = get_random_param_value();
-		population_new[i].E = get_random_param_value();
+		__population_new[i].chromosome.A = get_random_param_value();
+		__population_new[i].chromosome.B = get_random_param_value();
+		__population_new[i].chromosome.C = get_random_param_value();
+		__population_new[i].chromosome.D = get_random_param_value();
+		__population_new[i].chromosome.E = get_random_param_value();
 	}
 }
 
@@ -477,29 +453,33 @@ void init()
 {
 	init_population();
 	calculate_fitness_optimized();
+	Model_Utils::copy_population(__population_old, __population_new, Pop_Size);
+	init_population();
+	calculate_fitness_optimized();
 }
 
 void print_results() 
 {
-	// find the best chromosome in fitness vector - after selection, the best
-	// chromosome is in the new population
-	int best_chromosome_index = 0;
+	// find the best record - after selection, the best
+	// chromosome is in the old population, but let's iterate the whole
+	// population just to be sure.
+	unsigned int best_record_index = 0;
 	for (int i = 1; i < Pop_Size; i++)
 	{
-		if (fitness_new[i] < fitness_new[best_chromosome_index])
+		if (__population_old[i].fitness < __population_old[best_record_index].fitness)
 		{
-			best_chromosome_index = i;
+			best_record_index = i;
 		}
 	}
 	
-	current_chromosome = population_new[best_chromosome_index];
+	best_record = __population_old[best_record_index];
 
 	// print the best chromosome
 	print_current_chromosome();
 
 	// print the best fitness
 	fputs(uart_file, "Best fitness: ");
-	ftoa(fitness_new[best_chromosome_index], string_buffer);
+	ftoa(best_record.fitness, string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 
@@ -513,7 +493,7 @@ void print_results()
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 	fputs(uart_file, "Predicted glucose level that should match the last input: ");
-	ftoa(y(t_current - model_parameters.t_pred, current_chromosome.A, current_chromosome.B, current_chromosome.C, current_chromosome.D, current_chromosome.E, model_parameters.t_delta), string_buffer);
+	ftoa(y(t_current - model_parameters.t_pred, best_record.chromosome.A, best_record.chromosome.B, best_record.chromosome.C, best_record.chromosome.D, best_record.chromosome.E, model_parameters.t_delta), string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 
@@ -522,11 +502,10 @@ void print_results()
 	itoa((t_current + model_parameters.t_pred), string_buffer, 10);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, " mins): ");
-	ftoa(y(t_current, current_chromosome.A, current_chromosome.B, current_chromosome.C, current_chromosome.D, current_chromosome.E, model_parameters.t_delta), string_buffer);
+	ftoa(y(t_current, best_record.chromosome.A, best_record.chromosome.B, best_record.chromosome.C, best_record.chromosome.D, best_record.chromosome.E, model_parameters.t_delta), string_buffer);
 	fputs(uart_file, string_buffer);
 	fputs(uart_file, "\r\n");
 }
-
 
 int main()
 {
@@ -545,7 +524,6 @@ int main()
 	fputs(uart_file, "BUFFERS INITIALIZED!\r\n");
 
 	t_current = T_MIN;
-	
 	init();
 
 	fputs(uart_file, "init done! starting training!\r\n");

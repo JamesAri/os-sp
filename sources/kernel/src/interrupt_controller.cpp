@@ -56,6 +56,11 @@ extern "C" void _internal_irq_handler()
         sTimer.IRQ_Callback();
 }
 
+extern "C" void _internal_generic_abort_handler()
+{
+	sUART0.Write("ABORT!\n");
+}
+
 extern "C" void __attribute__((interrupt("FIQ"))) fast_interrupt_handler()
 {
     // zatim nepouzivame
