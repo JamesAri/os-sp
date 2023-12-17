@@ -56,8 +56,8 @@ uint32_t CTRNG::Get_Random_Number()
 
     // az budeme umet blokovat procesy, tak tady by melo byt opet cekani na entropii:
 	// budeme mit jeden process + init process, pro ted necham blokujici...
-    while (!(mTrng_Regs[static_cast<uint32_t>(hal::TRNG_Reg::Status)] >> 24))
-       ;
+    // while (!(mTrng_Regs[static_cast<uint32_t>(hal::TRNG_Reg::Status)] >> 24))
+    //    ;
 
     return mTrng_Regs[static_cast<uint32_t>(hal::TRNG_Reg::Data)];
 }
