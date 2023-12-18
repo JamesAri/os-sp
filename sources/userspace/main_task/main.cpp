@@ -90,8 +90,8 @@ TModel_Parameters model_parameters = {5, 15};
 
 // TICS MEASURED ON Pop_Size = 10000 and Iterations = 100
 
-constexpr int Pop_Size = 1000;
-constexpr int Iterations = 100;
+constexpr int Pop_Size = 2000;
+constexpr int Iterations = 200;
 
 // napr. 1024 zaznamu... uzivatel zatim pise rucne do konzole, takze to snad bude stacit
 constexpr unsigned int Lookup_Size = 1024;
@@ -99,8 +99,8 @@ unsigned int lookup_table_index = 0;
 
 constexpr float Min_Init_Param_Rng = -15.0f;
 constexpr float Max_Init_Param_Rng = 15.0f;
-constexpr float Min_Mutation_Rng = -0.01f;
-constexpr float Max_Mutation_Rng = 0.01f;
+constexpr float Min_Mutation_Rng = -0.1f;
+constexpr float Max_Mutation_Rng = 0.1f;
 
 // minimum time to start predicting
 // unsigned int lookup_table_min_size = (model_parameters.t_pred / model_parameters.t_delta) + 1;
@@ -302,9 +302,6 @@ void crossover()
 
 	for(int i = 1; i < Pop_Size; i+=2) 
 	{
-		population_new[i-1] = population_old[i-1];
-		population_new[i] = population_old[i];
-
 		TChromosome &child = population_new[i-1];
 		TChromosome &parent = population_new[i];
 
@@ -363,7 +360,11 @@ void crossover()
 void mutate()
 {	
 	// Optimization: generate one mutation float for the whole population - [3.3k tics to 1.8k tics] :-(
-	float rnd_val = get_random_mutation_value();
+	float rnd_val_A = get_random_mutation_value();
+	float rnd_val_B = get_random_mutation_value();
+	float rnd_val_C = get_random_mutation_value();
+	float rnd_val_D = get_random_mutation_value();
+	float rnd_val_E = get_random_mutation_value();
 	uint32_t rnd_index = get_random_param_index();
 	// iterate over the population and mutate each chromosome
 	for(int i = 0; i < Pop_Size; i++)
@@ -374,19 +375,19 @@ void mutate()
 		switch(static_cast<EChromosome_Parameters>((rnd_index + i) % 5)) 
 		{
 			case EChromosome_Parameters::A:
-				population_new[i].A += rnd_val;
+				population_new[i].A += rnd_val_A;
 				break;
 			case EChromosome_Parameters::B:
-				population_new[i].B += rnd_val;
+				population_new[i].B += rnd_val_B;
 				break;
 			case EChromosome_Parameters::C:
-				population_new[i].C += rnd_val;
+				population_new[i].C += rnd_val_C;
 				break;
 			case EChromosome_Parameters::D:
-				population_new[i].D += rnd_val;
+				population_new[i].D += rnd_val_D;
 				break;
 			case EChromosome_Parameters::E:
-				population_new[i].E += rnd_val;
+				population_new[i].E += rnd_val_E;
 				break;	
 			default:
 				break;
