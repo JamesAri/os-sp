@@ -286,17 +286,37 @@ float atof(const char* s)
   if (*s == '-'){
     s++;
     fact = -1;
-  };
+  }
   for (int point_seen = 0; *s; s++){
     if (*s == '.'){
       point_seen = 1; 
       continue;
-    };
+    }
     int d = *s - '0';
     if (d >= 0 && d <= 9){
       if (point_seen) fact /= 10.0f;
       rez = rez * 10.0f + (float)d;
-    };
-  };
+    }
+  }
   return rez * fact;
+};
+
+bool is_float(char *str)
+{
+	if (str[0] == '\0') return false;
+	
+	int i = 0;
+	int dot_count = 0;
+	while(str[i] != '\0')
+	{
+		if (str[i] == '.')
+		{
+			dot_count++;
+			if (dot_count > 1) return false;
+		}
+		else if (str[i] < '0' || str[i] > '9') return false;
+		i++;
+	}
+	return true;
+
 };

@@ -16,3 +16,4 @@ void ftoa(float x, char *bfr);
 void ftoa(float x, char *bfr, const unsigned int decimals);
 unsigned int strcspn(const char* str1, const char* str2);
 int strncmp(const char *s1, const char *s2);
+bool is_float(char *str);
