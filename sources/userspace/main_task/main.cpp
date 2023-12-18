@@ -369,7 +369,10 @@ void next_generation()
 // finds and sets the best chromosome from the fitness vector
 // after selection, the best chromosome is in the new population (new fitness vector)
 uint32_t find_best_chromosome()
-{
+{	
+	// since we take the best from old and new, we need to update the
+	// old chromosomes which have now old fitness values
+	calculate_fitness_optimized();
 
 	int best_chromosome_index = 0;
 	for (int i = 1; i < Pop_Size; i++)
@@ -405,30 +408,49 @@ void print_results()
 	fputs(uart_file, pred);
 }
 
+// pozn. tady mozna bude lepsi vytvorit nejakou kernel podporu pro cteni celych radek...
 // returns true if should stop
 // false otherwise
 bool check_for_stop_command()
-{
+{	
 	uint32_t v = fgets(uart_file, receive_buffer, RecvBfrSize);
-
 	receive_buffer[strcspn(receive_buffer, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
+
+	static char temp_bfr[6];
+	static unsigned int temp_bfr_index = 0;
 
 	if (v > 0)
 	{
-		if (strncmp(receive_buffer, "stop") == 0)
+		if (v < RecvBfrSize) receive_buffer[v] = '\0';
+		else receive_buffer[RecvBfrSize-1] = '\0';
+
+		for (int i = 0; i < v; i++)
 		{
-			fputs(uart_file, "Received STOP command!\r\n");
-			fputs(uart_file, "Stopping training phase!\r\n");
-			return true;
-		}
-		else
-		{
-			fputs(uart_file, "Only \"stop\" command allowed during training.\r\n");
-			fputs(uart_file, "Training will resume shortly...\"");
-			sleep(20000);
-			return false;
+			temp_bfr[temp_bfr_index++] = receive_buffer[i];
+			
+			if(temp_bfr_index == 5)
+			{
+				temp_bfr_index = 0;
+
+				// null-terminating character must be at index 5 ( strlen("stop")+1) )
+				if (temp_bfr[5] == '\0')
+				{
+					if (strncmp(temp_bfr, "stop") == 0)
+					{
+						fputs(uart_file, "Received STOP command!\r\n");
+						fputs(uart_file, "Stopping training phase!\r\n");
+						return true;
+					}
+				}
+
+				fputs(uart_file, "Only \"stop\" command allowed during training.\r\n");
+				fputs(uart_file, "Training will resume shortly...\"");
+				sleep(20000);
+				return false;
+			}
 		}
 	}
+
 	return false;
 }
 
@@ -466,7 +488,6 @@ void compare_in_time()
 		fputs(uart_file, actual);
 		fputs(uart_file, "Difference: ");
 		fputs(uart_file, diff);
-	
 	}
 }
 
@@ -597,6 +618,8 @@ void wait_for_new_input()
 			}
 			else if (strncmp(receive_buffer, "compare") == 0)
 			{
+				fputs(uart_file, "Received COMPARE command!\r\n");
+
 				if (can_predict())
 				{
 					compare_in_time();
@@ -608,6 +631,8 @@ void wait_for_new_input()
 			}
 			else if (strncmp(receive_buffer, "settings") == 0)
 			{
+				fputs(uart_file, "Received SETTINGS command!\r\n");
+
 				fputs(uart_file, "Population: ");
 				fputs(uart_file, Pop_Size);
 
@@ -715,6 +740,10 @@ int main()
 			}
 			if(check_for_stop_command())
 			{	
+				// rn. there will be a bug when user retrains (by "retrain" command) - he will be allowed to 
+				// "remove" values from lookup table one by one by abusing the stop command.
+				// but since it doesn't break anything, I will leave it for now.
+				lookup_table_index--;
 				wait_for_new_input();
 				continue;
 			}
