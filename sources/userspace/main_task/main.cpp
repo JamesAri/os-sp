@@ -93,7 +93,7 @@ TModel_Parameters model_parameters = {5, 15};
 
 // TICS MEASURED ON Pop_Size = 10000 and Iterations = 100
 
-constexpr int Pop_Size = 10000;
+constexpr int Pop_Size = 1000;
 constexpr int Iterations = 100;
 
 // napr. 1024 zaznamu... uzivatel zatim pise rucne do konzole, takze to snad bude stacit
@@ -109,14 +109,14 @@ int T_MIN = model_parameters.t_delta + model_parameters.t_pred;
 
 // 0min, 5min, 10min, 15min, 20min, 25min, 30min
 float lookup_table[Lookup_Size] = {
-	13.457f,
-	13.800f,
-	13.400f,
-	13.000f,
-	12.600f,
-	12.200f,
-	11.800f,
-	11.600f,
+	10.0f,
+	11.0f,
+	12.0f,
+	13.0f,
+	14.0f,
+	15.0f,
+	16.0f,
+	17.0f,
 };
 
 int t_current = T_MIN;
@@ -272,17 +272,32 @@ void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 	for(int t = T_MIN; t <= t_current; t += model_parameters.t_delta)
 	{   
 		// Extracted t-values here - [1k tics to 580 tics]
+
+		// previous time: (t - prediction window)
+		const float t_prev = t - model_parameters.t_pred;
+
+		// current glucose level in time t
 		const float val_t = lookup_table[static_cast<int>(t / model_parameters.t_delta)];
-		const float val_t_minus_delta = lookup_table[static_cast<int>((t-model_parameters.t_delta) / model_parameters.t_delta)];
-		const float val_t_diff = val_t - val_t_minus_delta;
+
+		// index of previous time in lookup table
+		const unsigned int index = static_cast<int>(t_prev / model_parameters.t_delta);
+
+		// glucose level in previous time
+		const float val_t_prev = lookup_table[index];
+
+		// same as: lookup_table[static_cast<int>((t_prev-model_parameters.t_delta) / model_parameters.t_delta)];
+		const float val_t_prev_minus_delta = lookup_table[index - 1];
+
+		// difference between time <t> and previous glucose level
+		const float val_t_prev_diff = val_t_prev - val_t_prev_minus_delta;
 		
 		for(int i = 0; i < Pop_Size; i++)
 		{
 			// spocteme predikci v case (t - t_pred) a porovname s opravdovou hodnotou v case t.
 			// b()
-			const float b_t = (population_new[i].D / population_new[i].E) * ((val_t_diff) / model_parameters.t_delta) + (1.0f / population_new[i].E) * val_t;
+			const float b_t = (population_new[i].D / population_new[i].E) * (val_t_prev_diff / model_parameters.t_delta) + (1.0f / population_new[i].E) * val_t_prev;
 			// y()
-			const float pred = population_new[i].A * b_t + population_new[i].B * b_t * (b_t - val_t) + population_new[i].C;
+			const float pred = population_new[i].A * b_t + population_new[i].B * b_t * (b_t - val_t_prev) + population_new[i].C;
 			
 			// Optimization: Use ABS instead of MSE formula: (y-y')^2 - [3.5k tics to 1.7k tics]
 			const float strength = pred - val_t;
@@ -450,7 +465,6 @@ void next_generation()
 	print_duration(mutate, "mutate duration: ");
 	// calculate_fitness_optimized();
 	print_duration(calculate_fitness_optimized, "calculate_fitness_optimized duration: ");
-
 
 	// =========== SELECTING BEST POPULATION ===========
 
