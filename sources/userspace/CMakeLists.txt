@@ -37,4 +37,4 @@ ENDFUNCTION(ADD_USERSPACE_EXECUTABLE)
 ADD_USERSPACE_EXECUTABLE(init_task init_task/main.cpp)
 
 # volitelne tasky pro ruzne ulohy
-ADD_USERSPACE_EXECUTABLE(main_task main_task/main.cpp)
+ADD_USERSPACE_EXECUTABLE(main_task main_task/model_utils.cpp main_task/main.cpp)

@@ -5,113 +5,48 @@
 #include <stdmemory.h>
 #include <kth-finder.h>
 
-#include "defs.h"
+#include "model_defs.h"
+#include "model_utils.h"
 
 #include <drivers/bridges/uart_defs.h> 
 
-
-static void fputs(uint32_t file, const char* string)
-{
-	write(file, string, strlen(string));
-}
-
-static uint32_t fgets(uint32_t file, char* buffer, uint32_t size)
-{
-	return read(file, buffer, size);
-}
-
-constexpr uint32_t RecvBfrSize = 1000;
-// for number to string conversions
-constexpr uint32_t StringBfrSize = 32;
-
 uint32_t trng_file;
 uint32_t uart_file;
-char receive_buffer[RecvBfrSize];
-char string_buffer[StringBfrSize];
 
-void init_uart()
-{
-	uart_file = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
-	if (uart_file == Invalid_Handle) return;
-	TUART_IOCtl_Params params;
-	params.baud_rate = NUART_Baud_Rate::BR_115200;
-	params.char_length = NUART_Char_Length::Char_8;
-	ioctl(uart_file, NIOCtl_Operation::Set_Params, &params);
-	fputs(uart_file, "TEST task starting!\r\n");
-}
-
-void init_trng()
-{
-	trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
-}
-
-// =============================================================
-
+// Tics in comments measured on Pop_Size = 10000 and Iterations = 100
+// used for optimizing - measures duration (tics) of the callback fn 
 void print_duration(void (*callback)(), const char *msg)
 {
+	char string_buffer[32];
+	bzero(string_buffer, 32);
+	
 	uint32_t start, end;
 	start = get_tick_count();
 	callback();
 	end = get_tick_count();
 
 	fputs(uart_file, msg);
-	itoa(end - start, string_buffer, 10);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
+	fputs(uart_file, end - start);
 }
 
-enum class EChromosome_Parameters
-{
-	A = 0,
-	B = 1,
-	C = 2,
-	D = 3,
-	E = 4
-};
-
-struct TChromosome
-{
-	float A;
-	float B;
-	float C;
-	float D;
-	float E;
-};
-
-struct TModel_Parameters
-{
-	int t_delta;
-	int t_pred;
-};
-
-TChromosome current_chromosome = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
-
-TModel_Parameters model_parameters = {5, 15};
-
-// TICS MEASURED ON Pop_Size = 10000 and Iterations = 100
-
-constexpr int Pop_Size = 2000;
-constexpr int Iterations = 200;
-
-// napr. 1024 zaznamu... uzivatel zatim pise rucne do konzole, takze to snad bude stacit
-constexpr unsigned int Lookup_Size = 1024;
-unsigned int lookup_table_index = 0;
+constexpr uint32_t RecvBfrSize = 1000;
+char receive_buffer[RecvBfrSize];
 
 constexpr float Min_Init_Param_Rng = -15.0f;
 constexpr float Max_Init_Param_Rng = 15.0f;
 constexpr float Min_Mutation_Rng = -0.1f;
 constexpr float Max_Mutation_Rng = 0.1f;
 
-// minimum time to start predicting
-// unsigned int lookup_table_min_size = (model_parameters.t_pred / model_parameters.t_delta) + 1;
-
+// napr. 1024 zaznamu... uzivatel zatim pise rucne do konzole, takze to snad bude stacit
+constexpr unsigned int Lookup_Size = 1024;
+unsigned int lookup_table_index = 0;
 float lookup_table[Lookup_Size];
-
-unsigned int T_MIN = model_parameters.t_delta + model_parameters.t_pred;
-int t_current;
 
 constexpr unsigned int Fitness_Vector_Size = Pop_Size * 2;
 constexpr unsigned int Fitness_Vector_Size_Bytes = Fitness_Vector_Size * sizeof(float);
+
+TChromosome current_chromosome;
+TModel_Parameters model_parameters = {5, 15};
 
 TChromosome *population_old;
 TChromosome *population_new;
@@ -124,17 +59,8 @@ float* fitness_new;
 // fitness_old vector pointing in the middle of the fitness vector, swaps next iteration
 float* fitness_old;
 
-// float lookup_table[Lookup_Size] = {
-// 	13.457f,
-// 	13.800f,
-// 	13.400f,
-// 	13.000f,
-// 	12.600f,
-// 	12.200f,
-// 	11.800f,
-// 	11.600f,
-// };
-
+unsigned int T_MIN = model_parameters.t_delta + model_parameters.t_pred;
+int t_current;
 
 // =========== UTILS ===========
 
@@ -151,11 +77,6 @@ float get_random_param_value()
 float get_random_mutation_value()
 {
 	return get_random_float(trng_file, Min_Mutation_Rng, Max_Mutation_Rng);
-}
-
-int lookup(int t)
-{
-	return lookup_table[static_cast<int>(t / model_parameters.t_delta)];
 }
 
 bool can_predict()
@@ -189,6 +110,11 @@ void copy_array(float* from, float* to, int size)
 
 // =========== MODEL ===========
 
+int lookup(int t)
+{
+	return lookup_table[static_cast<int>(t / model_parameters.t_delta)];
+}
+
 float b(int t, float D, float E, int t_delta)
 {
 	const float diff = (lookup(t) - lookup(t - t_delta));
@@ -201,6 +127,11 @@ float y(int t, float A, float B, float C, float D, float E, int t_delta)
 
 	// TODO: extract b_t => reduce multiplication
 	return A * b_t + B * b_t * (b_t - lookup(t)) + C;
+}
+
+float y(int t, TChromosome &chromosome, int t_delta)
+{
+	return y(t, chromosome.A, chromosome.B, chromosome.C, chromosome.D, chromosome.E, t_delta);
 }
 
 // 1.7k tics
@@ -223,6 +154,11 @@ void calculate_fitness()
 // 580 tics
 void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 {
+	for (int i = 0; i < Pop_Size; i++)
+	{
+		fitness_new[i] = 0.0f;
+	}
+
 	for(int t = T_MIN; t <= t_current; t += model_parameters.t_delta)
 	{   
 		// Extracted t-values here - [1k tics to 580 tics]
@@ -359,19 +295,21 @@ void crossover()
 // 200 tics
 void mutate()
 {	
-	// Optimization: generate one mutation float for the whole population - [3.3k tics to 1.8k tics] :-(
+	// Optimization: generate one mutation float for each param (not optimal :/) - [3.3k tics to 1.8k tics]
 	float rnd_val_A = get_random_mutation_value();
 	float rnd_val_B = get_random_mutation_value();
 	float rnd_val_C = get_random_mutation_value();
 	float rnd_val_D = get_random_mutation_value();
 	float rnd_val_E = get_random_mutation_value();
+
 	uint32_t rnd_index = get_random_param_index();
+
 	// iterate over the population and mutate each chromosome
 	for(int i = 0; i < Pop_Size; i++)
 	{
 		// Optimization: instead of generating new random parameter index for each chromosome, generate one and use the 
 		// for-loop index as an offset - [1.8k tics to 200 tics]
-		// could also use rnd_index = (rnd_index + i) mod 5
+		// could also use rnd_index = (rnd_index + i) mod 5, but there would be some indexes in disadvantage
 		switch(static_cast<EChromosome_Parameters>((rnd_index + i) % 5)) 
 		{
 			case EChromosome_Parameters::A:
@@ -397,69 +335,42 @@ void mutate()
 
 void next_generation()
 {	
-	// =========== PRESERVE OLD POPULATION: NEW --> OLD ===========
-
 	// Copy new population to old population array:
-	copy_population(); // TODO optimize
+	copy_population(); 
 	// print_duration(copy_population, "copy_population duration: ");
 
 	// Since new population got copied to the old one, we need to swap the fitness pointers.
 	// Swap the new fitness pointer with the old fitness pointer:
 	// fitness vector before: [-----fitness_old-----|-----fitness_new-----]
 	// fitness vector after:  [-----fitness_new-----|-----fitness_old-----]
-	// the [-----fitness_new-----] will be overwritten in the next steps.
+	// the [-----fitness_new-----] will be overwritten in next steps.
 	swap_fitness_vectors();
 	// print_duration(swap_fitness_vectors, "swap_fitness_vectors duration: ");
 
-	
-	// =========== CREATING NEW POPULATION (crossover, mutation, fitness) ===========
-
+	// Crossover the new population
 	crossover();
 	// print_duration(crossover, "crossover duration: ");
+
+	// Mutate the new population
 	mutate();
 	// print_duration(mutate, "mutate duration: ");
+
+	// Calculate fitness for the new population
 	calculate_fitness_optimized();
 	// print_duration(calculate_fitness_optimized, "calculate_fitness_optimized duration: ");
 
-
-	// =========== SELECTING BEST POPULATION ===========
-
-	// Select the best chromosomes from old + new population.
+	// Select the best chromosomes from old + new population
 	select();
 	// print_duration(select, "select duration: ");
 }
 
 // =========== INIT ===========
 
-void print_current_chromosome() 
+// finds and sets the best chromosome from the fitness vector
+// after selection, the best chromosome is in the new population (new fitness vector)
+uint32_t find_best_chromosome()
 {
-	fputs(uart_file, "Current parameters: \r\n");
-	fputs(uart_file, "A: ");
-	ftoa(current_chromosome.A, string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-	fputs(uart_file, "B: ");
-	ftoa(current_chromosome.B, string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-	fputs(uart_file, "C: ");
-	ftoa(current_chromosome.C, string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-	fputs(uart_file, "D: ");
-	ftoa(current_chromosome.D, string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-	fputs(uart_file, "E: ");
-	ftoa(current_chromosome.E, string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-}
 
-void print_results() 
-{
-	// find the best chromosome in fitness vector - after selection, the best
-	// chromosome is in the new population
 	int best_chromosome_index = 0;
 	for (int i = 1; i < Pop_Size; i++)
 	{
@@ -468,47 +379,94 @@ void print_results()
 			best_chromosome_index = i;
 		}
 	}
-	
 	current_chromosome = population_new[best_chromosome_index];
 
-	// print the best chromosome
-	print_current_chromosome();
-
-	// print the best fitness
-	fputs(uart_file, "Best fitness: ");
-	ftoa(fitness_new[best_chromosome_index], string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-
-	// print info about model and some debug info
-	fputs(uart_file, "Population: ");
-	itoa(Pop_Size, string_buffer, 10);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-	fputs(uart_file, "Iterations: ");
-	itoa(Iterations, string_buffer, 10);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-	fputs(uart_file, "Predicted glucose level that should match the last input: ");
-	ftoa(y(t_current - model_parameters.t_pred, current_chromosome.A, current_chromosome.B, current_chromosome.C, current_chromosome.D, current_chromosome.E, model_parameters.t_delta), string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
-
-	// Print predicted glucose level in 15 mins
-	fputs(uart_file, "Predicted glucose level in 15 mins (at ");
-	itoa((t_current + model_parameters.t_pred), string_buffer, 10);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, " mins): ");
-	ftoa(y(t_current, current_chromosome.A, current_chromosome.B, current_chromosome.C, current_chromosome.D, current_chromosome.E, model_parameters.t_delta), string_buffer);
-	fputs(uart_file, string_buffer);
-	fputs(uart_file, "\r\n");
+	return best_chromosome_index;
 }
 
-void print_params()
+void print_results() 
 {
-	if (can_predict())
+	const uint32_t best_chromosome_index = find_best_chromosome();
+
+	// print the best chromosome
+	print_chromosome(uart_file, current_chromosome);
+
+	// print the best chromosome's fitness
+	fputs(uart_file, "Best fitness: ");
+	fputs(uart_file, fitness_new[best_chromosome_index]);
+
+	// print predicted glucose level in 15 mins
+	fputs(uart_file, "Predicted glucose level in ");
+	fputs(uart_file, model_parameters.t_pred, false);
+	fputs(uart_file, "mins (at ");
+	fputs(uart_file, static_cast<uint32_t>(t_current + model_parameters.t_pred), false);
+	fputs(uart_file, " mins): ");
+	const float pred = y(t_current, current_chromosome, model_parameters.t_delta);
+	fputs(uart_file, pred);
+}
+
+// returns true if should stop
+// false otherwise
+bool check_for_stop_command()
+{
+	uint32_t v = fgets(uart_file, receive_buffer, RecvBfrSize);
+
+	receive_buffer[strcspn(receive_buffer, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
+
+	if (v > 0)
 	{
-		print_current_chromosome();
+		if (strncmp(receive_buffer, "stop") == 0)
+		{
+			fputs(uart_file, "Received STOP command!\r\n");
+			fputs(uart_file, "Stopping training phase!\r\n");
+			return true;
+		}
+		else
+		{
+			fputs(uart_file, "Only \"stop\" command allowed during training.\r\n");
+			fputs(uart_file, "Training will resume shortly...\"");
+			sleep(20000);
+			return false;
+		}
+	}
+	return false;
+}
+
+void reset_model()
+{
+	for (int i = 0; i < Pop_Size; i++)
+	{
+		population_new[i].A = get_random_param_value();
+		population_new[i].B = get_random_param_value();
+		population_new[i].C = get_random_param_value();
+		population_new[i].D = get_random_param_value();
+		population_new[i].E = get_random_param_value();
+	}
+
+	calculate_fitness_optimized();
+	current_chromosome = population_new[0];
+}
+
+// will print the difference (absolute value) between predicted and actual value for each time in the lookup table
+void compare_in_time()
+{
+	for(int t = T_MIN; t <= t_current; t += model_parameters.t_delta)
+	{
+		const float pred = y(t - model_parameters.t_pred, current_chromosome, model_parameters.t_delta);
+		const float actual = lookup(t);
+		float diff = pred - actual;
+		diff = (diff >= 0.0f) ? diff : -diff;
+
+		fputs(uart_file, "Time: ");
+		fputs(uart_file, t, false);
+		fputs(uart_file, " min(s)\r\n");
+		fputs(uart_file, "Predicted: ");
+		fputs(uart_file, pred);
+		fputs(uart_file, "Actual: ");
+		fputs(uart_file, actual);
+		fputs(uart_file, "Difference: ");
+		fputs(uart_file, diff);
+	
 	}
 }
 
@@ -523,27 +481,39 @@ void wait_for_new_input()
 			if (v < RecvBfrSize) receive_buffer[v] = '\0';
 			else receive_buffer[RecvBfrSize-1] = '\0';
 
-			fputs(uart_file, "New input received!\r\n");
-			
-			char string_copy[RecvBfrSize];
-			strncpy(string_copy, receive_buffer, RecvBfrSize);
-			string_copy[strcspn(string_copy, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
+			receive_buffer[strcspn(receive_buffer, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
 
-			if (is_float(string_copy))
+			if (is_float(receive_buffer))
 			{	
-				fputs(uart_file, "Received new VALUE!\r\n");
-				float recv_float = atof(string_copy);
-				ftoa(recv_float, string_buffer);
-				fputs(uart_file, "Value: ");
-				fputs(uart_file, string_buffer);
-				fputs(uart_file, "\r\n");
+				fputs(uart_file, "Received new glucose VALUE!\r\n");
+
+				float recv_float = atof(receive_buffer);
+				fputs(uart_file, "Received value: ");
+				fputs(uart_file, recv_float);
 				
 				// save to lookup table
 				t_current += model_parameters.t_delta;
-				lookup_table[lookup_table_index++] = atof(string_copy);
+				lookup_table[lookup_table_index++] = atof(receive_buffer);
 				break;
 			}
-			else if (strncmp(string_copy, "time") == 0)
+			else if (strncmp(receive_buffer, "help") == 0)
+			{
+				fputs(uart_file, "Received HELP command!\r\n\r\n");
+
+				fputs(uart_file, "Available commands: \"time\", \"lookup\", \"stop\", \"parameters\", \"reset\", \"retrain\", \"debug\" \r\n\r\n");
+				
+				fputs(uart_file, "lookup - prints current lookup table (saved values)\r\n");
+				fputs(uart_file, "time - prints current time (the last value in the lookup table corresponds to this time)\r\n");
+				fputs(uart_file, "stop - stops training phase\r\n");
+				fputs(uart_file, "parameters - prints current model parameters (A, B, C, D, E)\r\n");
+				fputs(uart_file, "reset - resets the model (keeps lookup table, current time, prediction window, time delta)\r\n");
+				fputs(uart_file, "retrain - retrain the model with current data and population\r\n");
+				
+				fputs(uart_file, "debug - prints debug commands\r\n");
+				
+				fputs(uart_file, "\r\n");
+			}
+			else if (strncmp(receive_buffer, "time") == 0)
 			{
 				fputs(uart_file, "Received TIME command!\r\n");
 
@@ -554,18 +524,16 @@ void wait_for_new_input()
 				}
 
 				fputs(uart_file, "Current time (we have value for this time): ");
-				itoa(t_current, string_buffer, 10);
-				fputs(uart_file, string_buffer);
+				fputs(uart_file, t_current, false);
 				fputs(uart_file, " min(s)\r\n");
 			}
-			else if (strncmp(string_copy, "lookup") == 0)
+			else if (strncmp(receive_buffer, "lookup") == 0)
 			{
 				fputs(uart_file, "Received LOOKUP command!\r\n");
 				fputs(uart_file, "[ ");
 				for (int i = 0; i < lookup_table_index; i++)
 				{
-					ftoa(lookup_table[i], string_buffer);
-					fputs(uart_file, string_buffer);
+					fputs(uart_file, lookup_table[i], false);
 					if (i < lookup_table_index - 1)
 					{
 						fputs(uart_file, ", ");
@@ -578,30 +546,104 @@ void wait_for_new_input()
 				fputs(uart_file, "]\r\n");
 
 			}
-			else if (strncmp(string_copy, "stop") == 0)
+			else if (strncmp(receive_buffer, "stop") == 0)
 			{
 				fputs(uart_file, "Received STOP command!\r\n");
+				fputs(uart_file, "Stop command allowed only during model training, which is not running now.\r\n");
+
 			}
-			else if (strncmp(string_copy, "parameters") == 0)
+			else if (strncmp(receive_buffer, "parameters") == 0)
 			{
 				fputs(uart_file, "Received PARAMETERS command!\r\n");
-				print_params();
+				if (can_predict())
+				{
+					print_chromosome(uart_file ,current_chromosome);
+				}
+				else
+				{
+					fputs(uart_file, "Model not trained yet, provide some input.\r\n");
+				}
+			}
+			else if (strncmp(receive_buffer, "reset") == 0)
+			{
+				fputs(uart_file, "Received RESET command!\r\n");
+
+				reset_model();
+
+				fputs(uart_file, "Model reset! (Data kept: lookup table, current time, prediction window, time delta)\r\n");
+			}
+			else if (strncmp(receive_buffer, "retrain") == 0)
+			{
+				fputs(uart_file, "Received RETRAIN command!\r\n");
+				if (can_predict())
+				{
+					fputs(uart_file, "Model will use current data and population to retrain.\r\n");
+					fputs(uart_file, "If you think the model is stuck at some local minimum, try to use the \"reset\" command and then retrain.\r\n");
+					sleep(20000);
+					break;
+				}
+				fputs(uart_file, "Model cannot be trained yet, provide some input please.\r\n");
+			}
+			else if (strncmp(receive_buffer, "debug") == 0)
+			{
+				fputs(uart_file, "Received DEBUG command!\r\n\r\n");
+
+				fputs(uart_file, "Available commands for debugging: \"compare\", \"settings\" \r\n\r\n");
+
+				fputs(uart_file, "compare - prints the difference (absolute value) between predicted and actual value for each time in the lookup table\r\n");
+				fputs(uart_file, "settings - prints current model settings\r\n");
+
+				fputs(uart_file, "\r\n");
+			}
+			else if (strncmp(receive_buffer, "compare") == 0)
+			{
+				if (can_predict())
+				{
+					compare_in_time();
+				}
+				else
+				{
+					fputs(uart_file, "Model not trained yet, user has to provide some input.\r\n");
+				}
+			}
+			else if (strncmp(receive_buffer, "settings") == 0)
+			{
+				fputs(uart_file, "Population: ");
+				fputs(uart_file, Pop_Size);
+
+				fputs(uart_file, "Iterations: ");
+				fputs(uart_file, Iterations);
 			}
 			else
 			{
 				fputs(uart_file, "Received UNKNOWN command!\r\n");
-				// print the UNKNOWN command
 				fputs(uart_file, "Unknown command: \"");
-				fputs(uart_file, string_copy);
+				fputs(uart_file, receive_buffer);
 				fputs(uart_file, "\"\r\n");
+				fputs(uart_file, "For list of commands type: \"help\"\r\n");
 			}
-		} 
-		else 
+		}
+		else
 		{
-			fputs(uart_file, "Waiting for new input...\r\n");
 			wait(uart_file);
 		}
 	}
+}
+
+void init_uart()
+{
+	uart_file = open("DEV:uart/0", NFile_Open_Mode::Read_Write);
+	if (uart_file == Invalid_Handle) return;
+	TUART_IOCtl_Params params;
+	params.baud_rate = NUART_Baud_Rate::BR_115200;
+	params.char_length = NUART_Char_Length::Char_8;
+	ioctl(uart_file, NIOCtl_Operation::Set_Params, &params);
+	fputs(uart_file, "Task starting!\r\n");
+}
+
+void init_trng()
+{
+	trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
 }
 
 void init_buffers()
@@ -615,29 +657,11 @@ void init_buffers()
 	fitness_old = fitness_new + Pop_Size;
 }
 
-void init_population()
-{
-	for (int i = 0; i < Pop_Size; i++)
-	{
-		population_new[i].A = get_random_param_value();
-		population_new[i].B = get_random_param_value();
-		population_new[i].C = get_random_param_value();
-		population_new[i].D = get_random_param_value();
-		population_new[i].E = get_random_param_value();
-	}
-}
-
-void init_model()
-{
-	t_current = -5;
-	init_population();
-	current_chromosome = population_new[0];
-}
-
 uint32_t init_globals()
-{
+{	
+	t_current = -5;
+
 	bzero(receive_buffer, RecvBfrSize);
-	bzero(string_buffer, StringBfrSize);
 	
 	init_uart();
 	if (uart_file == Invalid_Handle)
@@ -652,39 +676,29 @@ uint32_t init_globals()
 		return FAILURE;
 	} 
 
-	fputs(uart_file, "INITIALIZING BUFFERS!\r\n");
+	fputs(uart_file, "Initializing buffer!\r\n");
 	init_buffers();
-	fputs(uart_file, "BUFFERS INITIALIZED!\r\n");
+	fputs(uart_file, "Buffers Initialized!\r\n");
 	
-	return SUCCESS;
-}
-
-uint32_t init()
-{
-	if(init_globals())
-	{
-		return FAILURE;
-	}
-
-	init_model();
 	return SUCCESS;
 }
 
 int main()
 {
-	if(init() == FAILURE)
+	if(init_globals() == FAILURE)
 	{
 		return FAILURE;
 	}
 
 	fputs(uart_file, "Initialization done! Waiting for user input!\r\n");
+	fputs(uart_file, "For list of commands type: \"help\"\r\n");
 
 	while (!can_predict()) // because of the prediction formula
 	{
 		wait_for_new_input();
 	}
 
-	calculate_fitness_optimized();
+	reset_model();
 
 	while(true)
 	{
@@ -696,19 +710,17 @@ int main()
 			if (((i+1) * 100) % Iterations == 0)
 			{
 				fputs(uart_file, "Progress: ");
-				itoa((i+1) * 100 / Iterations, string_buffer, 10);
-				fputs(uart_file, string_buffer);
+				fputs(uart_file, static_cast<uint32_t>((i+1) * 100 / Iterations), false);
 				fputs(uart_file, "%\r\n");
+			}
+			if(check_for_stop_command())
+			{	
+				wait_for_new_input();
+				continue;
 			}
 		}
 
-		fputs(uart_file, "Iteration done!\r\n");
-		
-		// print current time
-		fputs(uart_file, "Current time: ");
-		itoa(t_current, string_buffer, 10);
-		fputs(uart_file, string_buffer);
-		fputs(uart_file, "\r\n");
+		fputs(uart_file, "Training phase done!\r\n");
 		
 		// print results
 		print_results();
