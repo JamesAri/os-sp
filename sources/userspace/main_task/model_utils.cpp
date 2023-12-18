@@ -44,7 +44,7 @@ uint32_t fgets(uint32_t fd, char* buffer, uint32_t size)
 
 void print_chromosome(uint32_t fd ,TChromosome &chromosome) 
 {
-	fputs(fd, "Current parameters: \r\n");
+	fputs(fd, "Model parameters: \r\n");
 	fputs(fd, "A: ");
 	fputs(fd, chromosome.A);
 	fputs(fd, "B: ");
@@ -55,4 +55,13 @@ void print_chromosome(uint32_t fd ,TChromosome &chromosome)
 	fputs(fd, chromosome.D);
 	fputs(fd, "E: ");
 	fputs(fd, chromosome.E);
+}
+
+void print_model_parameters(uint32_t fd, TModel_Parameters &model_parameters)
+{
+	fputs(fd, "Model time parameters: \r\n");
+	fputs(fd, "Time delta (t_delta): ");
+	fputs(fd, model_parameters.t_delta);
+	fputs(fd, "Prediction window (t_pred): ");
+	fputs(fd, model_parameters.t_pred);
 }

@@ -320,3 +320,16 @@ bool is_float(char *str)
 	return true;
 
 };
+
+bool is_int(char *str)
+{
+	if (str[0] == '\0') return false;
+	
+	int i = 0;
+	while(str[i] != '\0')
+	{
+		if (str[i] < '0' || str[i] > '9') return false;
+		i++;
+	}
+	return true;
+};

@@ -46,7 +46,7 @@ constexpr unsigned int Fitness_Vector_Size = Pop_Size * 2;
 constexpr unsigned int Fitness_Vector_Size_Bytes = Fitness_Vector_Size * sizeof(float);
 
 TChromosome current_chromosome;
-TModel_Parameters model_parameters = {5, 15};
+TModel_Parameters model_parameters = {0, 0};
 
 TChromosome *population_old;
 TChromosome *population_new;
@@ -59,7 +59,9 @@ float* fitness_new;
 // fitness_old vector pointing in the middle of the fitness vector, swaps next iteration
 float* fitness_old;
 
-unsigned int T_MIN = model_parameters.t_delta + model_parameters.t_pred;
+// minumum time so we can start training & predicting
+unsigned int t_min;
+// current time (last value in the lookup table corresponds to this time)
 int t_current;
 
 // =========== UTILS ===========
@@ -81,7 +83,9 @@ float get_random_mutation_value()
 
 bool can_predict()
 {
-	return t_current >= model_parameters.t_delta + model_parameters.t_pred;
+	bool has_enough_data = t_current >= model_parameters.t_delta + model_parameters.t_pred;
+	bool has_model_params = model_parameters.t_delta > 0 && model_parameters.t_pred > 0;
+	return has_enough_data && has_model_params;
 }
 
 // Copies new population to old population
@@ -137,7 +141,7 @@ float y(int t, TChromosome &chromosome, int t_delta)
 // 1.7k tics
 void calculate_fitness()
 {
-	for(int t = T_MIN; t <= t_current; t += model_parameters.t_delta)
+	for(int t = t_min; t <= t_current; t += model_parameters.t_delta)
 	{   
 		// TODO: extract t-values here and pass them to y,b functions
 		for(int i = 0; i < Pop_Size; i++)
@@ -159,7 +163,7 @@ void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 		fitness_new[i] = 0.0f;
 	}
 
-	for(int t = T_MIN; t <= t_current; t += model_parameters.t_delta)
+	for(int t = t_min; t <= t_current; t += model_parameters.t_delta)
 	{   
 		// Extracted t-values here - [1k tics to 580 tics]
 
@@ -398,10 +402,10 @@ void print_results()
 	fputs(uart_file, "Best fitness: ");
 	fputs(uart_file, fitness_new[best_chromosome_index]);
 
-	// print predicted glucose level in 15 mins
+	// print predicted glucose level in x mins
 	fputs(uart_file, "Predicted glucose level in ");
 	fputs(uart_file, model_parameters.t_pred, false);
-	fputs(uart_file, "mins (at ");
+	fputs(uart_file, " mins (at ");
 	fputs(uart_file, static_cast<uint32_t>(t_current + model_parameters.t_pred), false);
 	fputs(uart_file, " mins): ");
 	const float pred = y(t_current, current_chromosome, model_parameters.t_delta);
@@ -472,7 +476,7 @@ void reset_model()
 // will print the difference (absolute value) between predicted and actual value for each time in the lookup table
 void compare_in_time()
 {
-	for(int t = T_MIN; t <= t_current; t += model_parameters.t_delta)
+	for(int t = t_min; t <= t_current; t += model_parameters.t_delta)
 	{
 		const float pred = y(t - model_parameters.t_pred, current_chromosome, model_parameters.t_delta);
 		const float actual = lookup(t);
@@ -506,6 +510,65 @@ void wait_for_new_input()
 
 			if (is_float(receive_buffer))
 			{	
+				if (model_parameters.t_delta <= 0 && is_int(receive_buffer))
+				{	
+					int recv_val = atoi(receive_buffer);
+					if (recv_val <= 0)
+					{
+						fputs(uart_file, "Time delta must be greater than 0!\r\n");
+						continue;
+					}
+					model_parameters.t_delta = recv_val;
+					fputs(uart_file, "Received new time delta!\r\n");
+					fputs(uart_file, "Time delta: ");
+					fputs(uart_file, model_parameters.t_delta, false);
+					fputs(uart_file, " min(s)\r\n");
+					fputs(uart_file, "Now input prediction window!\r\n");
+					continue;
+				}
+				else if (model_parameters.t_pred <= 0 && is_int(receive_buffer))
+				{
+					int recv_val = atoi(receive_buffer);
+					if (recv_val <= 0)
+					{
+						fputs(uart_file, "Prediction window must be greater than 0!\r\n");
+						continue;
+					}
+					else if (recv_val < model_parameters.t_delta)
+					{
+						fputs(uart_file, "Prediction window must be greater than time delta!\r\n");
+						continue;
+					}
+					else if (recv_val % model_parameters.t_delta != 0)
+					{
+						fputs(uart_file, "Prediction window must be divisible by time delta!\r\n");
+						continue;
+					}
+
+					model_parameters.t_pred = recv_val;
+					fputs(uart_file, "Received new prediction window!\r\n");
+					fputs(uart_file, "Prediction window: ");
+					fputs(uart_file, model_parameters.t_pred, false);
+					fputs(uart_file, " min(s)\r\n");
+
+					t_min = static_cast<int>(model_parameters.t_delta + model_parameters.t_pred);
+					const int needed_values_cnt = static_cast<int>(t_min / model_parameters.t_delta) + 1;
+					t_current = -model_parameters.t_delta;
+
+					fputs(uart_file, "Now input glucose values!\r\n");
+					fputs(uart_file, "Need ");
+					fputs(uart_file, needed_values_cnt, false);
+					fputs(uart_file, " more glucose values before the model can begin training and prediction.\r\n");
+
+					continue;
+				}
+				else if (model_parameters.t_pred <= 0 || model_parameters.t_delta <= 0)
+				{
+
+					fputs(uart_file, "First input time delta and then prediction window.\r\n");
+					continue;
+				}
+
 				fputs(uart_file, "Received new glucose VALUE!\r\n");
 
 				float recv_float = atof(receive_buffer);
@@ -578,6 +641,7 @@ void wait_for_new_input()
 				fputs(uart_file, "Received PARAMETERS command!\r\n");
 				if (can_predict())
 				{
+					print_model_parameters(uart_file, model_parameters);
 					print_chromosome(uart_file ,current_chromosome);
 				}
 				else
@@ -684,8 +748,6 @@ void init_buffers()
 
 uint32_t init_globals()
 {	
-	t_current = -5;
-
 	bzero(receive_buffer, RecvBfrSize);
 	
 	init_uart();
@@ -715,8 +777,12 @@ int main()
 		return FAILURE;
 	}
 
-	fputs(uart_file, "Initialization done! Waiting for user input!\r\n");
+	fputs(uart_file, "Single-Task job, KIV-RTOS skeleton\r\n");
+	fputs(uart_file, "Author: Slechta Jakub (A23N0026P)\r\n");
+	fputs(uart_file, "First input time delta (t_delta) and then prediction window (t_pred).\r\n");
 	fputs(uart_file, "For list of commands type: \"help\"\r\n");
+
+	fputs(uart_file, "Initialization done! Waiting for user input!\r\n");
 
 	while (!can_predict()) // because of the prediction formula
 	{
