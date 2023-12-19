@@ -406,21 +406,20 @@ void print_results()
 	fputs(uart_file, "Predicted glucose level in ");
 	fputs(uart_file, model_parameters.t_pred, false);
 	fputs(uart_file, " mins (at ");
-	fputs(uart_file, static_cast<uint32_t>(t_current + model_parameters.t_pred), false);
+	fputs(uart_file, (t_current + model_parameters.t_pred), false);
 	fputs(uart_file, " mins): ");
 	const float pred = y(t_current, current_chromosome, model_parameters.t_delta);
 	fputs(uart_file, pred);
 }
 
 // pozn. tady mozna bude lepsi vytvorit nejakou kernel podporu pro cteni celych radek...
-// returns true if should stop
-// false otherwise
+// returns true if should stop, false otherwise
 bool check_for_stop_command()
 {	
 	uint32_t v = fgets(uart_file, receive_buffer, RecvBfrSize);
-	receive_buffer[strcspn(receive_buffer, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
+	// receive_buffer[strcspn(receive_buffer, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
 
-	static char temp_bfr[6];
+	static char temp_bfr[RecvBfrSize];
 	static unsigned int temp_bfr_index = 0;
 
 	if (v > 0)
@@ -428,37 +427,48 @@ bool check_for_stop_command()
 		if (v < RecvBfrSize) receive_buffer[v] = '\0';
 		else receive_buffer[RecvBfrSize-1] = '\0';
 
-		for (int i = 0; i < v; i++)
-		{
-			temp_bfr[temp_bfr_index++] = receive_buffer[i];
-			
-			if(temp_bfr_index == 5)
+		for (int i = 0; i < v && temp_bfr_index < RecvBfrSize; i++)
+		{			
+			// check for new line character(s)
+			if (receive_buffer[i] == '\r' || receive_buffer[i] == '\n')
 			{
-				temp_bfr_index = 0;
+				temp_bfr[temp_bfr_index] = '\0';
 
-				// null-terminating character must be at index 5 ( strlen("stop")+1) )
-				if (temp_bfr[5] == '\0')
+				int bfr_index = temp_bfr_index;
+				temp_bfr_index = 0;
+				
+				// first 4 (0.-3.) characters must be "stop", so terminating/newline char(s) must be 5th (4.) character
+				if(bfr_index == 4)
 				{
 					if (strncmp(temp_bfr, "stop") == 0)
 					{
 						fputs(uart_file, "Received STOP command!\r\n");
-						fputs(uart_file, "Stopping training phase!\r\n");
+						fputs(uart_file, "Stopped training phase and rollbacked one delta time!\r\n");
 						return true;
 					}
 				}
-
+				
 				fputs(uart_file, "Only \"stop\" command allowed during training.\r\n");
-				fputs(uart_file, "Training will resume shortly...\"");
-				sleep(20000);
+				fputs(uart_file, "Training will resume shortly...\r\n");
+				sleep(30000);
 				return false;
 			}
+			temp_bfr[temp_bfr_index++] = receive_buffer[i];
 		}
+	}
+
+	if (temp_bfr_index >= RecvBfrSize)
+	{
+		temp_bfr_index = 0;
+		fputs(uart_file, "Only \"stop\" command allowed during training.\r\n");
+		fputs(uart_file, "Training will resume shortly...\r\n");
+		sleep(30000);
 	}
 
 	return false;
 }
 
-void reset_model()
+void generate_rnd_new_pop()
 {
 	for (int i = 0; i < Pop_Size; i++)
 	{
@@ -468,7 +478,11 @@ void reset_model()
 		population_new[i].D = get_random_param_value();
 		population_new[i].E = get_random_param_value();
 	}
+}
 
+void reset_model()
+{
+	generate_rnd_new_pop();
 	calculate_fitness_optimized();
 	current_chromosome = population_new[0];
 }
@@ -588,7 +602,7 @@ void wait_for_new_input()
 				
 				fputs(uart_file, "lookup - prints current lookup table (saved values)\r\n");
 				fputs(uart_file, "time - prints current time (the last value in the lookup table corresponds to this time)\r\n");
-				fputs(uart_file, "stop - stops training phase\r\n");
+				fputs(uart_file, "stop - stops training phase and rollbacks one delta time (removes last value from lookup table)\r\n");
 				fputs(uart_file, "parameters - prints current model parameters (A, B, C, D, E)\r\n");
 				fputs(uart_file, "reset - resets the model (keeps lookup table, current time, prediction window, time delta)\r\n");
 				fputs(uart_file, "retrain - retrain the model with current data and population\r\n");
@@ -601,7 +615,7 @@ void wait_for_new_input()
 			{
 				fputs(uart_file, "Received TIME command!\r\n");
 
-				if (t_current < 0)
+				if (t_current < 0 || model_parameters.t_delta <= 0 || model_parameters.t_pred <= 0)
 				{
 					fputs(uart_file, "No input provided yet (waiting for value at minute 0).\r\n");
 					continue;
@@ -646,16 +660,22 @@ void wait_for_new_input()
 				}
 				else
 				{
-					fputs(uart_file, "Model not trained yet, provide some input.\r\n");
+					fputs(uart_file, "Model not trained yet, provide some input or retrain.\r\n");
 				}
 			}
 			else if (strncmp(receive_buffer, "reset") == 0)
 			{
 				fputs(uart_file, "Received RESET command!\r\n");
 
-				reset_model();
-
-				fputs(uart_file, "Model reset! (Data kept: lookup table, current time, prediction window, time delta)\r\n");
+				if (can_predict())
+				{
+					reset_model();
+					fputs(uart_file, "Model reset! (Data kept: lookup table, current time, prediction window, time delta)\r\n");
+				}
+				else
+				{
+					fputs(uart_file, "Model not trained yet, provide some input or retrain.\r\n");	
+				}
 			}
 			else if (strncmp(receive_buffer, "retrain") == 0)
 			{
@@ -664,7 +684,7 @@ void wait_for_new_input()
 				{
 					fputs(uart_file, "Model will use current data and population to retrain.\r\n");
 					fputs(uart_file, "If you think the model is stuck at some local minimum, try to use the \"reset\" command and then retrain.\r\n");
-					sleep(20000);
+					sleep(40000);
 					break;
 				}
 				fputs(uart_file, "Model cannot be trained yet, provide some input please.\r\n");
@@ -690,7 +710,7 @@ void wait_for_new_input()
 				}
 				else
 				{
-					fputs(uart_file, "Model not trained yet, user has to provide some input.\r\n");
+					fputs(uart_file, "Model not trained yet, user has to provide some input or retrain.\r\n");
 				}
 			}
 			else if (strncmp(receive_buffer, "settings") == 0)
@@ -807,10 +827,14 @@ int main()
 			if(check_for_stop_command())
 			{	
 				// rn. there will be a bug when user retrains (by "retrain" command) - he will be allowed to 
-				// "remove" values from lookup table one by one by abusing the stop command.
+				// "remove" values from lookup table one by one by abusing the "stop" command,
 				// but since it doesn't break anything, I will leave it for now.
 				lookup_table_index--;
+				t_current -= model_parameters.t_delta;
 				wait_for_new_input();
+				// reset progress, if we returned from wait_for_new_input, it means 
+				// that we should start predicting (that's how this inf. loop should work).
+				i = 0; 
 				continue;
 			}
 		}
