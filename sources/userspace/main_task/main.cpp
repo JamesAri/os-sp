@@ -3,7 +3,6 @@
 #include <stdmutex.h>
 #include <stdrandom.h>
 #include <stdmemory.h>
-#include <kth-finder.h>
 
 #include "model_defs.h"
 #include "model_utils.h"
@@ -29,21 +28,12 @@ void print_duration(void (*callback)(), const char *msg)
 	fputs(uart_file, end - start);
 }
 
+// Receive buffer
 constexpr uint32_t RecvBfrSize = 1000;
 char receive_buffer[RecvBfrSize];
 
-constexpr float Min_Init_Param_Rng = -15.0f;
-constexpr float Max_Init_Param_Rng = 15.0f;
-constexpr float Min_Mutation_Rng = -0.1f;
-constexpr float Max_Mutation_Rng = 0.1f;
-
-// napr. 1024 zaznamu... uzivatel zatim pise rucne do konzole, takze to snad bude stacit
-constexpr unsigned int Lookup_Size = 1024;
-unsigned int lookup_table_index = 0;
 float lookup_table[Lookup_Size];
-
-constexpr unsigned int Fitness_Vector_Size = Pop_Size * 2;
-constexpr unsigned int Fitness_Vector_Size_Bytes = Fitness_Vector_Size * sizeof(float);
+unsigned int lookup_table_index = 0;
 
 TChromosome current_chromosome;
 TModel_Parameters model_parameters = {0, 0};
@@ -62,9 +52,10 @@ float* fitness_old;
 // minumum time so we can start training & predicting
 unsigned int t_min;
 // current time (last value in the lookup table corresponds to this time)
-int t_current;
+int t_current = -1;
 
-// =========== UTILS ===========
+
+// =========== GENERIC MODEL UTILS ===========
 
 uint32_t get_random_param_index()
 {
@@ -112,6 +103,7 @@ void copy_array(float* from, float* to, int size)
 	}
 }
 
+
 // =========== MODEL ===========
 
 int lookup(int t)
@@ -155,7 +147,7 @@ void calculate_fitness()
 	}
 }
 
-// 580 tics
+// 630 tics
 void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 {
 	for (int i = 0; i < Pop_Size; i++)
@@ -165,7 +157,7 @@ void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 
 	for(int t = t_min; t <= t_current; t += model_parameters.t_delta)
 	{   
-		// Extracted t-values here - [1k tics to 580 tics]
+		// Extracted t-values here - [1k tics to 630 tics]
 
 		// previous time: (t - prediction window)
 		const float t_prev = t - model_parameters.t_pred;
@@ -200,14 +192,13 @@ void calculate_fitness_optimized() // Removed fn calls - [1.7k tics to 1k tics].
 	}
 }
 
-// 1k-5k tics (better performance when fitness vector partially sorted)
+// 1k-2.2k tics (better performance when fitness vector partially sorted)
 void select() 
 {
 	copy_array(fitness, tmp_fitness, Fitness_Vector_Size);
-	// memcpy(fitness, tmp_fitness, Fitness_Vector_Size_Bytes);
 	
 	// find fitness vector median (top 1/2 population), mutates the vector, thus the copy
-	const float median = Kth_Finder::findKthLargest(tmp_fitness, Fitness_Vector_Size, Pop_Size);
+	const float median = findKthLargest(tmp_fitness, Fitness_Vector_Size, Pop_Size);
 	
 	int index = 0;
 
@@ -368,7 +359,8 @@ void next_generation()
 	// print_duration(select, "select duration: ");
 }
 
-// =========== INIT ===========
+
+// =========== SPECIFIC MODEL UTILS | IO OPERATIONS ===========
 
 // finds and sets the best chromosome from the fitness vector
 // after selection, the best chromosome is in the new population (new fitness vector)
@@ -391,6 +383,26 @@ uint32_t find_best_chromosome()
 	return best_chromosome_index;
 }
 
+void generate_rnd_new_pop()
+{
+	for (int i = 0; i < Pop_Size; i++)
+	{
+		population_new[i].A = get_random_param_value();
+		population_new[i].B = get_random_param_value();
+		population_new[i].C = get_random_param_value();
+		population_new[i].D = get_random_param_value();
+		population_new[i].E = get_random_param_value();
+	}
+}
+
+void reset_model()
+{
+	generate_rnd_new_pop();
+	calculate_fitness_optimized();
+	current_chromosome = population_new[0];
+}
+
+// also updates the best chromosome
 void print_results() 
 {
 	const uint32_t best_chromosome_index = find_best_chromosome();
@@ -399,7 +411,7 @@ void print_results()
 	print_chromosome(uart_file, current_chromosome);
 
 	// print the best chromosome's fitness
-	fputs(uart_file, "Best fitness: ");
+	fputs(uart_file, "Best fitness (lower is better): ");
 	fputs(uart_file, fitness_new[best_chromosome_index]);
 
 	// print predicted glucose level in x mins
@@ -410,7 +422,33 @@ void print_results()
 	fputs(uart_file, " mins): ");
 	const float pred = y(t_current, current_chromosome, model_parameters.t_delta);
 	fputs(uart_file, pred);
+	fputs(uart_file, "If the current fitness is larger or the predicted glucose level seems wrong, try to reset and retrain the model.\r\n");
 }
+
+// will print the difference (absolute value) between predicted and actual value for each time in the lookup table
+void compare_in_time()
+{
+	for(int t = t_min; t <= t_current; t += model_parameters.t_delta)
+	{
+		const float pred = y(t - model_parameters.t_pred, current_chromosome, model_parameters.t_delta);
+		const float actual = lookup(t);
+		float diff = pred - actual;
+		diff = (diff >= 0.0f) ? diff : -diff;
+
+		fputs(uart_file, "Time: ");
+		fputs(uart_file, t, false);
+		fputs(uart_file, " min(s)\r\n");
+		fputs(uart_file, "Predicted: ");
+		fputs(uart_file, pred);
+		fputs(uart_file, "Actual: ");
+		fputs(uart_file, actual);
+		fputs(uart_file, "Difference: ");
+		fputs(uart_file, diff);
+	}
+}
+
+
+// =========== IO HANDLERS ===========
 
 // pozn. tady mozna bude lepsi vytvorit nejakou kernel podporu pro cteni celych radek...
 // returns true if should stop, false otherwise
@@ -466,47 +504,6 @@ bool check_for_stop_command()
 	}
 
 	return false;
-}
-
-void generate_rnd_new_pop()
-{
-	for (int i = 0; i < Pop_Size; i++)
-	{
-		population_new[i].A = get_random_param_value();
-		population_new[i].B = get_random_param_value();
-		population_new[i].C = get_random_param_value();
-		population_new[i].D = get_random_param_value();
-		population_new[i].E = get_random_param_value();
-	}
-}
-
-void reset_model()
-{
-	generate_rnd_new_pop();
-	calculate_fitness_optimized();
-	current_chromosome = population_new[0];
-}
-
-// will print the difference (absolute value) between predicted and actual value for each time in the lookup table
-void compare_in_time()
-{
-	for(int t = t_min; t <= t_current; t += model_parameters.t_delta)
-	{
-		const float pred = y(t - model_parameters.t_pred, current_chromosome, model_parameters.t_delta);
-		const float actual = lookup(t);
-		float diff = pred - actual;
-		diff = (diff >= 0.0f) ? diff : -diff;
-
-		fputs(uart_file, "Time: ");
-		fputs(uart_file, t, false);
-		fputs(uart_file, " min(s)\r\n");
-		fputs(uart_file, "Predicted: ");
-		fputs(uart_file, pred);
-		fputs(uart_file, "Actual: ");
-		fputs(uart_file, actual);
-		fputs(uart_file, "Difference: ");
-		fputs(uart_file, diff);
-	}
 }
 
 void wait_for_new_input()
@@ -738,6 +735,9 @@ void wait_for_new_input()
 		}
 	}
 }
+
+
+// =========== INITS | MAIN ===========
 
 void init_uart()
 {
