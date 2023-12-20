@@ -1,9 +1,12 @@
 ## Úvod
 
-Jméno: Jakub Šlechta (A23N0026P)\
-Zadání: **Single-task výpočet**\
-Zařízení: **Reálné** Raspberry Pi Zero\
-Kostra OS: KIV-RTOS\
+Jméno: Jakub Šlechta (A23N0026P)
+
+Zadání: **Single-task výpočet**
+
+Zařízení: **Reálné** Raspberry Pi Zero
+
+Kostra OS: KIV-RTOS
 
 V bodech:
 - vytvořit právě jeden user-space task, který bude zaštiťovat níže popsaný výpočet
