@@ -283,10 +283,6 @@ void* CUserspace_Heap_Manager::Alloc(uint32_t increment)
 		map_memory(pt, new_page_phys, new_userspace_page_virt);
 		// nastavime novy zacatek bloku
 		task->heap_current_block_start = new_userspace_page_virt;
-		sUART0.Write("Allocated new page: ");
-		sUART0.Write_Hex(new_userspace_page_virt);
-		sUART0.Write("\r\n");
-
 	}
 
 	task->heap_logical_break += increment;
