@@ -455,7 +455,6 @@ void compare_in_time()
 bool check_for_stop_command()
 {	
 	uint32_t v = fgets(uart_file, receive_buffer, RecvBfrSize);
-	// receive_buffer[strcspn(receive_buffer, "\r\n")] = '\0'; // remove LF, CR, CRLF, LFCR, ...
 
 	static char temp_bfr[RecvBfrSize];
 	static unsigned int temp_bfr_index = 0;

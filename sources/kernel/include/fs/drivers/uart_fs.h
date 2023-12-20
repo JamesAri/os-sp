@@ -91,12 +91,11 @@ class CUART_File final : public IFile
             return false;
         }
 
-		virtual bool Wait(uint32_t timeout) override
+		virtual bool Wait(uint32_t _count) override
 		{
 			// pokud mame co cist, neblokujeme proces
 			if (sUART0.Empty()) {
 				Wait_Enqueue_Current();
-        	    // sGPIO.Wait_For_Event(this, static_cast<uint32_t>(hal::Reserved_Pins::UART0_RX));
 				sUART0.Wait_For_Receive_Event(this);
 
     	        // zablokujeme, probudi nas az notify 
