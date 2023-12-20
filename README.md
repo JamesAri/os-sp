@@ -73,6 +73,7 @@ Nyní se pokusím v bodech popsat veškeré problémy, které bylo třeba vyře�
 ## Implementace
 
 V této části popíšu jak jsem zmíněné problémy řešil.
+
 (předem se omlouvám za mix angličtiny a češtiny u komentářů)
 
 #### Čtení z UARTu
