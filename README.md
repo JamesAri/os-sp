@@ -364,7 +364,7 @@ fmxr fpexc,r0
 
 Použil jsem evoluční stragii bez mnč:
 
-![[Pasted image 20231220185436.png]]
+![Pasted image 20231220185436](https://github.com/JamesAri/os-sp/assets/34036646/a15c12cb-a66c-4ab6-bd15-f8c1e70f2a78)
 
 #### Minimalizace spotřeby el. energie
 
